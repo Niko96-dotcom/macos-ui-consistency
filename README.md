@@ -32,13 +32,14 @@ the app choice, not a platform value):
 ## Layout
 
 - [Skill](skills/macos-ui-consistency/SKILL.md) — entrypoint, progressive disclosure.
-- [Discovery](skills/macos-ui-consistency/references/discovery.md), [layout contracts](skills/macos-ui-consistency/references/layout-contracts.md), [verification](skills/macos-ui-consistency/references/verification.md), [data format](skills/macos-ui-consistency/references/data-format.md) (normative CLI JSON schema).
+- [Discovery](skills/macos-ui-consistency/references/discovery.md), [layout contracts](skills/macos-ui-consistency/references/layout-contracts.md), [verification](skills/macos-ui-consistency/references/verification.md), [window adaptation](skills/macos-ui-consistency/references/window-adaptation.md), [data format](skills/macos-ui-consistency/references/data-format.md) (normative CLI JSON schema).
 - [CLI](skills/macos-ui-consistency/scripts/ui_consistency.py) — stdlib-only `scan`, `compare`, `report`.
 - [Contracts](examples/contracts.json), [measurements](examples/measurements.json), [expected comparison](examples/expected-comparison.json) — synthetic repo-root samples.
 - [Tests](tests/test_ui_consistency.py) — `unittest` suite.
 - [Validation scope](docs/VALIDATION.md) — exercised behavior and remaining limits.
 - [Fixture](fixture/README.md) — seeded native demo app.
 - [Scenarios](evals/scenarios.md) — checks and negative controls.
+- [Transfer cases](evals/transfer-cases.md) — contrasting tasks plus adversarial majority-wrong case (not yet run).
 - [Provenance](PROVENANCE.md), [contributing](CONTRIBUTING.md).
 
 ## Requirements
@@ -118,9 +119,11 @@ swift run --package-path fixture ConsistencyFixture --page playlists --aligned
 swift run --package-path fixture ConsistencyFixture --page playlists --compact
 ```
 
-`--aligned` shows the reference layout mode. `--compact` opens a 700x450
-window; the compact inspector is a separate toggle in its own family and is
-excluded by declaration.
+`--aligned` shows the reference layout mode. `--compact` starts at the
+fixture-specific 560×450-point content minimum. Optional panes yield as the
+window narrows, navigation remains available, and Inspector uses a sheet when
+there is insufficient pane space. See the [window adaptation research](docs/WINDOW-ADAPTATION-RESEARCH.md)
+and [fixture policy](fixture/README.md); these dimensions are not Apple-wide rules.
 
 ### Tests
 
@@ -138,6 +141,12 @@ Compact composition (native menu picker, secondary actions under More):
 
 ![Compact fixture layout](docs/images/fixture-compact.png)
 
+Tested minimum after an attempted drag below the supported size:
+
+![Minimum window with navigation available](docs/images/fixture-minimum.png)
+
+The seeded/aligned pair records the initial title-inset example; the compact
+and minimum images show the subsequent window-policy revision.
 Reference captures from the fixture on the verified host below. The sheet
 dismisses with Return.
 
@@ -154,7 +163,7 @@ dismisses with Return.
 ## Capabilities and roadmap
 
 Shipped: heuristic Swift candidate scan, declared numeric contract compare,
-Markdown report, five guidance checks, seeded fixture, eval scenarios.
+Markdown report, six guidance checks, seeded fixture, eval scenarios.
 Not shipped: screenshot parsing, universal auto-patcher, exhaustive
 coverage proof, built-in XCUI adapter. Instrumented probe unimplemented.
 
@@ -162,8 +171,10 @@ coverage proof, built-in XCUI adapter. Instrumented probe unimplemented.
 
 - [Skill](skills/macos-ui-consistency/SKILL.md)
 - [Data format](skills/macos-ui-consistency/references/data-format.md)
+- [Window adaptation](skills/macos-ui-consistency/references/window-adaptation.md)
 - [Fixture](fixture/README.md)
 - [Scenarios](evals/scenarios.md)
+- [Transfer cases](evals/transfer-cases.md)
 - [Provenance](PROVENANCE.md)
 - [Contributing](CONTRIBUTING.md)
 

@@ -89,17 +89,78 @@ gate fixes, not numeric confidence scores.
 ## Cross-page validation (coordinator handoff)
 
 Do not declare cross-page alignment from one anchor alone. Inventory and
-compare all shared shell anchors — title/subtitle, header envelope, controls
-baseline, divider, body start — at the same width and environment. An
+compare the declared shared shell anchors for that page family at the same
+width and environment (for example, a browser family might declare
+title/subtitle, header envelope, controls baseline, divider, and body
+start; other families declare their own roles). An
 explicit narrow-scope report (e.g., title leading only) cannot imply
 whole-page verified.
 
+## Window-boundary proof (no source-only pass)
+
+Source declaration never passes. Startup-compact alone never proves the
+boundary. Required runtime matrix per sibling page:
+
+- states: normal (default) + compact + narrowest (drag beyond declared
+  minimum where the platform permits, then release back); declared
+  fixed-size windows record N/A with justification instead of a resize
+  matrix;
+- applicable pane combinations only (where the app has collapsible
+  side/inspector panes, test closed/closed, open/closed, closed/open,
+  open/open at app values); do not require panes an app does not have,
+  and do not assume every pane is optional/collapsible — an inspector
+  may be an essential editor and a side pane may be primary, per
+  declared task priority;
+- both resize directions (wide→narrow, narrow→wide) and both navigation
+  orders (shortest→longest, longest→shortest) with post-resize re-measure
+  to catch stale height/branch, where resizing applies;
+- keyboard + VoiceOver spot-check in compact (same identifiers/focus,
+  reachable overflow actions, visible selection value, no arbitrarily
+  scaled controls; native small/mini sizes in context remain allowed).
+
+Unmeasured combinations stay `unverified` with explicit coverage status
+(pass/fail/unverified/excluded + reason). Current findings test limits;
+a green subset never implies the untested remainder.
+
+## Negative controls and acceptance matrix
+
+Negative controls (must stay excluded when declared intentional, never "fixed"):
+
+- wrapped-copy length differences; internal gutter differences only where
+  the semantic contract declares them intentional (never exempt by type
+  alone); compact-pane density where declared a separate family; native
+  titlebar/toolbar/traffic-light geometry; system text-style sizes.
+
+Acceptance (all measurable, same width/environment unless stated):
+
+- minimum usable (where resizing applies; fixed-size records N/A with
+  justification): no clipped primary control, no horizontal outer-page
+  scroll except where deliberately declared (for example a timeline
+  workspace with constrained panes), no unreachable action at narrowest
+  supported width AND height;
+- task-priority-first (per declared task priority, never always-detail):
+  controls for the declared primary task stay operable as the window
+  narrows; any collapse applies only to panes declared optional/
+  collapsible and is user-reversible with a persistent accessible
+  fallback appropriate to app capabilities (do not universally require
+  button + menu + shortcut);
+- compact composition (per declared compact contract, no universal
+  menu/disclosure mandate): hierarchy preserves meaning unless design
+  intent reorders it; shared label/control/action columns hold where
+  declared; selection value stays visible; every secondary action stays
+  reachable; full secondary copy stays discoverable with wrapping; no
+  arbitrary scaling to fit;
+- stability: the declared shared-shell anchors match across siblings within
+  tolerance at each tested state; selection and control state survives
+  resize and navigation.
+
 Coordinator validation needs (no automated tests claimed here): captured
 screenshots or manual pane-local measurements per sibling page at the same
-width, covering shortest vs longest header at default and narrow widths,
-inspector closed and open, both navigation orders, plus resize after
-measurement to prove no stale height. Map each claim to its evidence and
-contract; unmeasured combinations stay unverified.
+width, covering shortest vs longest header at app-declared default and
+narrow widths, with applicable pane combinations closed and open, both
+navigation orders, plus resize after measurement to prove no stale height.
+Map each claim to its evidence and contract; unmeasured combinations stay
+unverified.
 
 ## Measurement ceilings
 

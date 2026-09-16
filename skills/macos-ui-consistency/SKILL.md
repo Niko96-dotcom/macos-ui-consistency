@@ -18,6 +18,10 @@ calibrated per app and family; no universal dimensions are shipped here.
 - [HIG Layout](https://developer.apple.com/design/human-interface-guidelines/layout)
 - [HIG Typography](https://developer.apple.com/design/human-interface-guidelines/typography)
 - [HIG Windows](https://developer.apple.com/design/human-interface-guidelines/windows)
+- [HIG Sidebars](https://developer.apple.com/design/human-interface-guidelines/sidebars)
+- [HIG Split views](https://developer.apple.com/design/human-interface-guidelines/split-views)
+- [Designing for macOS](https://developer.apple.com/design/human-interface-guidelines/designing-for-macos)
+- [NSWindow minSize](https://developer.apple.com/documentation/appkit/nswindow/minsize) / [contentMinSize](https://developer.apple.com/documentation/appkit/nswindow/contentminsize)
 - [NSView alignmentRectInsets](https://developer.apple.com/documentation/appkit/nsview/alignmentrectinsets?language=objc)
 - [WWDC19 session 237 — custom alignment](https://developer.apple.com/videos/play/wwdc2019/237/)
 - [`XCUIElementAttributes.frame`](https://developer.apple.com/documentation/xcuiautomation/xcuielementattributes)
@@ -55,7 +59,11 @@ calibrated per app and family; no universal dimensions are shipped here.
    the same environment. No cross-family absolute coordinates.
    See [references/layout-contracts.md](references/layout-contracts.md).
 3. **Measure.** Capture pane-local values with method, uncertainty, and
-   evidence refs. Source-only work cannot claim visual verification.
+   evidence refs. Establish and runtime-test the usable sizing envelope
+   where the app supports resizing (normal/compact/narrowest,
+   applicable pane combinations) before polishing spacing. Fixed-size
+   windows justify N/A with reason. Source-only work cannot claim
+   visual verification.
 4. **Compare and report** with the sibling CLI (schemas owned by
    [references/data-format.md](references/data-format.md); read it for normative fields).
    Resolve scripts relative to the loaded SKILL.md directory, not the repo root.
@@ -82,19 +90,24 @@ calibrated per app and family; no universal dimensions are shipped here.
 
 ## Cross-page alignment scope
 
-Cross-page alignment requires inventorying and comparing all shared shell
-anchors — title/subtitle, header envelope, controls baseline, divider, body
-start — at the same width and environment before declaring pages aligned.
+Cross-page alignment requires inventorying and comparing the declared
+shared shell anchors for that page family — whatever roles the contract
+names (for example, one browser family might declare title/subtitle,
+header envelope, controls baseline, divider, and body start; a settings
+family would instead declare label/control columns) — at the same width
+and environment before declaring pages aligned.
 A report scoped to one anchor (e.g., title leading only) must state its
 narrow scope explicitly and cannot imply whole-page verified.
 
-## Guidance checks (detail in [references/layout-contracts.md](references/layout-contracts.md))
+## Guidance checks — six (detail in [references/layout-contracts.md](references/layout-contracts.md))
 
 1. Shared shells and page families over per-screen offsets.
 2. Pane-local keylines and relational anchors.
 3. Semantic type roles, not decorated sizes.
 4. Control sizing by context and role.
 5. Grouping by proximity first; cards and pills only with a stated role.
+6. Window adaptation first: usable sizing envelope before spacing polish.
+   See [references/window-adaptation.md](references/window-adaptation.md).
 
 ## Capability fallbacks (host-neutral)
 

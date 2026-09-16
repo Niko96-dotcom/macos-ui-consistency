@@ -34,7 +34,16 @@ Canonical comparisons happen in pane-local or content-local points with a
 declared unit and coordinate space. Points times scale equals pixels;
 cross-scale pixel diffs are invalid. Distinguish container edges from
 text edges and icon gutters from table columns. Independent stacks with
-independent spacers do not create a shared column.
+independent spacers do not create a shared column. Define one relational
+ control column (declared shared selection label/control/action keylines:
+ baselines, grid columns, value edges) separately from content/table
+ internal gutters (cell padding, internal insets). Whether differing
+ internal gutters are intentional is decided by the declared semantic
+ contract and design intent, never exempted by control type alone; only
+ drift of the declared shared column fails. Do not require one equal
+ width across unrelated controls. Do not mechanically align labels to
+ button text glyphs — use native alignment geometry and group semantics.
+ Never label every differing edge "inconsistent".
 
 Every rule carries scope, rationale, evidence method, severity,
 tolerance, environment, and authority (`apple`, `app-decision`, or
@@ -59,9 +68,20 @@ become defaults. Normative field lists live in [data-format.md](data-format.md)
   context, icon-label gap, optical insets, cell padding.
 - **Environment or derived — computed:** breakpoints from usable width,
   label-column width with a wrap bound, header height from content plus
-  variant, overflow and stacking decisions.
+  variant, overflow and stacking decisions. Usable width/height envelope
+  first (see [window-adaptation.md](window-adaptation.md)): no spacing
+  verdict below the tested envelope is valid.
 
-## The five guidance checks
+## Platform metrics vs app values
+
+Apple owns idiom, never numbers for the app: Mac push/square/help/image
+button roles, pop-up menu as space-efficient selector, 13pt default /
+10pt minimum type floor with SF Pro, tooltip/RTL/keyboard conventions,
+frame-vs-alignment-rect behavior. The app owns every inset, gap,
+breakpoint, and minimum window content size. No universal numeric window
+size ships from this skill; no HIG sentence becomes an app default.
+
+## The six guidance checks
 
 1. **Shells.** One shared shell per family; fix drift at the highest
    responsible level (shell, component, value, composition) before
@@ -75,72 +95,97 @@ become defaults. Normative field lists live in [data-format.md](data-format.md)
    sizes. Test Mac accessibility and app scaling, not phone checklists.
 4. **Control sizing.** Size, style, and shape follow context and role;
    Mac idiom is compact relative to touch UIs. Never force touch targets,
-   equal-width pills, or one width across families.
+   equal-width pills, or one width across families. Native small/mini
+   control sizes in their documented contexts are allowed; arbitrary
+   visual scaling to hide a fit failure is not allowed.
 5. **Grouping.** Prefer proximity; reserve cards for genuinely distinct
    content and pills/badges/buttons for their own meanings. Never card
    every group, nest boxes that duplicate spacing, or re-skin materials
    because a newer OS style exists. Existing chrome and material choices
    are audited for consistency, not auto-replaced.
+6. **Window adaptation.** Usable sizing envelope before spacing polish.
+   See [window-adaptation.md](window-adaptation.md).
 
 ## Shared header envelope (same family/environment only)
 
 Wrapped copy length itself is intentional, but downstream drift of shared
-shell anchors (controls baseline, divider, body start) across sibling pages
-at the same width violates the shared shell and is actionable.
+shell anchors (for example, a browser family's controls baseline, divider,
+or body start) across sibling pages at the same width violates the shared
+shell and is actionable.
 
 Where sibling headers in a declared same family and environment differ only
-by wrapping copy length, stabilize downstream anchors with a shared
-width-dependent, content-derived header/description envelope over sibling
-descriptions: a SwiftUI Layout or hidden accessibility-excluded sizing
-reference measuring all sibling descriptions live at the current width, height
-is the max. No hardcoded header height/line count, no truncation, no
-shortened copy, no per-page offsets, no historical max cache. Narrow widths
-and inspector-open re-resolve live; no stale height on resize. The envelope
+by wrapping copy length, downstream anchors must stay stable by a declared
+mechanism. One allowed pattern is a shared width-dependent, content-derived
+header/description envelope over sibling descriptions: a SwiftUI Layout or
+hidden accessibility-excluded sizing reference measuring all sibling
+descriptions live at the current width, height is the max. Other declared
+mechanisms are equally acceptable where they fit the family — for example,
+top-anchored controls independent of header height, or a fixed family header
+height with wrapping copy confined below the anchor line. Whatever the
+mechanism, it must hold with no truncation, no shortened copy, no per-page
+offsets, and no stale height on resize or inspector-open (narrow widths and
+inspector-open re-resolve live; no historical max cache). The mechanism
 applies only within the declared same family/environment, never globally
-across every page. Preserve intentional Table-vs-List internal differences
-and system chrome.
+across every page. Preserve differences the semantic contract declares
+intentional plus system chrome; never exempt gutter differences by type
+alone.
 
 ## Compact composition (intentional, not accidental stacking)
 
 A narrow-window fallback is a declared variant, not an excuse for a cramped
-mixed stack. Missed failure pattern: huge blank reserved above controls on
-the shortest header (envelope applied where it should not be) plus Shuffle
-label left / Sort label indented by a segmented picker / Inspector-Info
-buttons crammed below. Flag that combination as FAIL against the compact
+mixed stack. Flag accidental stacking (for example: large blank reserved
+above controls on the shortest sibling plus misaligned selection labels
+plus secondary actions crammed below) as FAIL against the declared compact
 contract even when each control alone looks native.
 
 Deliberate compact contract (app-decision, per same width/variant):
 
-- Hierarchy: controls sit directly below the subtitle (controls top stable,
-  no huge reserved blank); long explanatory description moves to a shared
-  below-controls area (e.g. `About this view` disclosure) or Info sheet.
-  Full text stays discoverable with wrapping; never truncate or
-  blanket-hide important content.
-- Aligned labels: compact semantic group with aligned label/control columns
-  (e.g. `Grid`, no arbitrary offsets to align native labels) or a clean
-  native compact menu picker for the secondary selector (menu avoids the
-  segmented-label indent).
-- Action overflow: keep a coherent wide row in regular; in compact, secondary
-  Info/Inspector may move into an accessible labeled `More` menu. Every
-  action and current selection stays reachable with preserved accessibility
-  labels, identifiers, and focus at readable native sizes (never scale/shrink
-  controls, never globally force equal heights, never reset filter state on
-  navigation/resize, never reposition native chrome).
-- Adaptation is fit-driven (`ViewThatFits` or equivalent), not device/width
-  assumptions; shared pieces are reused, not duplicated giant layouts.
+- Hierarchy: follow the declared task priority for what stays visible and
+  operable as space shrinks; do not assume one pane always wins. Preserve
+  meaning and information hierarchy unless design intent explicitly
+  reorders it. Long secondary copy may move to a declared below-controls
+  or overflow location with full text still discoverable and wrapping;
+  never truncate or blanket-hide important content to fit, and do not
+  require overflow menus or disclosures for every app — the mechanism is
+  app-declared.
+- Aligned labels: where selection controls form a semantic group, declare
+  shared label/control/action columns with relational anchors (baselines,
+  grid columns, value edges) using native alignment geometry plus group
+  semantics. Do not add arbitrary per-screen offsets, force one equal
+  width across unrelated controls, or mechanically align labels to button
+  text glyphs.
+- Action overflow: any overflow mechanism is app-declared and must keep
+  every action and current selection reachable with preserved
+  accessibility labels, identifiers, and focus at readable native sizes
+  (never scale/shrink controls to fit, never globally force equal
+  heights, never reset state on navigation/resize, never reposition
+  native chrome).
+- Adaptation is fit-driven (content-measured fit, not device/width
+  assumptions); shared pieces are reused, not duplicated giant layouts.
+
+Example (explicitly labelled, not normative): one app might place
+secondary actions in a labeled overflow menu and long copy in a shared
+disclosure below controls, resolving a width-dependent shared envelope
+live in both resize directions.
 
 Assess hierarchy, aligned labels, overflow reachability, and content
-discoverability together. Test thresholds in both directions (wide→narrow
-and narrow→wide), with inspector open/closed (180pt), at default 1000×650
-and minimum 700×450, and with shortest vs longest headers, so stale heights
-and one-way-only fallbacks cannot pass.
+discoverability together. Test thresholds live in both directions
+(wide→narrow and narrow→wide), with applicable pane combinations open
+and closed at the app-declared default and minimum sizes, and with
+shortest vs longest headers, so stale heights and one-way-only fallbacks
+cannot pass. Where a window is declared fixed-size with justification,
+the resize matrix is N/A with reason recorded.
 
 ## Optical alignment last
 
 Fix structural insets and baselines first. Equal frames can still
 misalign text — use baselines, not centers. Ornamented views need
-alignment-rect reasoning; symbols must weight-match adjacent text;
-custom guides align text across nested stacks. Optical nudges are
+alignment-rect reasoning (`alignmentRectInsets`: segmented-picker indent,
+menu chevron, switch track overhang are native, not app offsets);
+symbols must weight-match adjacent text;
+ custom guides align text across nested stacks. Compact selection-value and
+ overflow-action edges are judged against the declared control column, not
+ against content leading or table cell text. Optical nudges are
 component-owned, narrow, documented with a reason, and allowlisted —
 never scattered per-screen offsets. Geometry invariance across
 appearances holds only where the contract claims it.

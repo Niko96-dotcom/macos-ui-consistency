@@ -53,3 +53,20 @@ Info sheet open/Return dismissal. The final sizing probe uses disabled hidden
 controls with constant bindings, no actions affecting state, and no identifiers;
 AX snapshots show one visible Shuffle/Sort control in each variant. Full VoiceOver
 and keyboard-navigation certification is not claimed. Swift build passes.
+
+## Window policy and boundary verification
+
+Refreshed Apple HIG and AppKit sources are summarized in
+[window adaptation research](WINDOW-ADAPTATION-RESEARCH.md). The previous
+constraints-only patch failed a real drag below the declared minimum. The
+revised native resize delegate passed repeated attempts to shrink to roughly
+200×200: the captured window stopped at 560×502, matching 560×450 content plus
+native chrome. Sidebar collapse precedes the stop; the Navigate picker remains
+available for both automatic collapse and manual hiding. Widening restores the
+requested sidebar; manual hiding stays hidden. Ctrl-Command-S restores an
+automatically collapsed sidebar and widens just enough to show it. Compact
+startup was inspected. Narrow Inspector sheet access and retained Volume on
+wide reopen were tested. Sort and More share the same control-column edge.
+
+These dimensions are fixture decisions. Full localization, VoiceOver, and all
+window-management modes remain untested; screenshots alone do not certify them.
