@@ -65,6 +65,24 @@ the window to fit.
   (180pt, vertically scrollable) does not squeeze the detail pane
   unusably narrow. Outer `HStack` is bounded to host bounds.
 
+## Header envelope (vertical stability across sibling pages)
+
+- Detail header uses a shared width-dependent, content-derived
+  `DescriptionEnvelope` over all sibling descriptions (visible copy plus
+  hidden accessibility-excluded sizing references, same font/wrapping).
+  Envelope height is the live max at the current width, so the short Tracks
+  copy (one line) reserves the same space as longer Albums/Playlists copy
+  (two lines) at that width. Controls baseline, divider, and body start stay
+  stable across Tracks/Albums/Playlists at the same width.
+- No hardcoded header height/line count, no truncation, no shortened copy, no
+  per-page offsets, no historical max cache. Narrow widths and inspector-open
+  re-resolve live; no stale height on resize.
+- Wrapped copy length itself remains intentional; only downstream drift of
+  shared shell anchors (controls/divider/body top) is treated as a defect.
+- Deliberate +8pt Playlists title seed is preserved here (coordinator's
+  runnable copy removes it separately). Table-vs-List internal differences and
+  system chrome are preserved.
+
 ## Seeded vs aligned
 
 - **Seeded (default):** the Playlists content title uses 32pt leading

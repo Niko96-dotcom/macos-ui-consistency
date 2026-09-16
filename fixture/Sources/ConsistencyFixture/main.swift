@@ -141,6 +141,50 @@ let pageDescriptions: [Page: String] = [
     .playlists: "Six playlists with deliberately varied detail strings. Some rows carry much longer trailing detail text than others so row heights and wrapping differ across the list. This uneven text length is an intended variant, not the seeded alignment defect.",
 ]
 
+// MARK: - Shared header envelope (vertical stability across sibling pages)
+
+// Width-dependent, content-derived envelope over sibling descriptions.
+// All three page descriptions are measured live at the current offered width;
+// the envelope height is the max, so shorter copy (Tracks, one line) reserves
+// the same vertical space as longer copy (Albums/Playlists, two lines) at that
+// width. No hardcoded height/line count, no truncation, no copy shortening,
+// no per-page offsets, no cached max: inspector toggle, narrow width, and
+// resize all re-resolve live with no stale height. Hidden siblings are
+// accessibility-excluded and non-interactive; only the current page carries
+// its description identifier. Title/subtitle/controls/divider/body share one
+// code path for every page, so controls baseline, divider, and body start stay
+// stable within this family. Table-vs-List internal differences preserved.
+struct DescriptionEnvelope: View {
+    let page: Page
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            ForEach(Page.allCases) { other in
+                if other == page {
+                    Text(pageDescriptions[other] ?? "")
+                        .font(.body)
+                        .foregroundColor(.secondary)
+                        .lineLimit(nil)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .accessibilityIdentifier("page-description-\(other.rawValue)")
+                } else {
+                    Text(pageDescriptions[other] ?? "")
+                        .font(.body)
+                        .foregroundColor(.secondary)
+                        .lineLimit(nil)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .opacity(0)
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+    }
+}
+
 // MARK: - Sidebar
 
 struct SidebarView: View {
@@ -225,14 +269,9 @@ struct DetailPane: View {
                     .padding(.trailing, ContentLayout.sharedLeading)
                     .accessibilityIdentifier("page-subtitle-\(page.rawValue)")
 
-                Text(pageDescriptions[page] ?? "")
-                    .font(.body)
-                    .foregroundColor(.secondary)
-                    .lineLimit(nil)
-                    .fixedSize(horizontal: false, vertical: true)
+                DescriptionEnvelope(page: page)
                     .padding(.leading, ContentLayout.sharedLeading)
                     .padding(.trailing, ContentLayout.sharedLeading)
-                    .accessibilityIdentifier("page-description-\(page.rawValue)")
 
                 ViewThatFits(in: .horizontal) {
                     HStack(spacing: 12) {

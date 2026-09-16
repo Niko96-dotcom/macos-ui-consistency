@@ -80,6 +80,14 @@ calibrated per app and family; no universal dimensions are shipped here.
    Re-run on an unchanged app must yield zero new findings. Never silently
    re-baseline a failing reference to quiet it.
 
+## Cross-page alignment scope
+
+Cross-page alignment requires inventorying and comparing all shared shell
+anchors — title/subtitle, header envelope, controls baseline, divider, body
+start — at the same width and environment before declaring pages aligned.
+A report scoped to one anchor (e.g., title leading only) must state its
+narrow scope explicitly and cannot imply whole-page verified.
+
 ## Guidance checks (detail in [references/layout-contracts.md](references/layout-contracts.md))
 
 1. Shared shells and page families over per-screen offsets.

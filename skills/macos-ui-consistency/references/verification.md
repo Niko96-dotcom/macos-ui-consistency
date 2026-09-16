@@ -86,6 +86,21 @@ gate fixes, not numeric confidence scores.
   scope, expiry, and rationale, and a good-difference suite must fail the
   run if flagged.
 
+## Cross-page validation (coordinator handoff)
+
+Do not declare cross-page alignment from one anchor alone. Inventory and
+compare all shared shell anchors — title/subtitle, header envelope, controls
+baseline, divider, body start — at the same width and environment. An
+explicit narrow-scope report (e.g., title leading only) cannot imply
+whole-page verified.
+
+Coordinator validation needs (no automated tests claimed here): captured
+screenshots or manual pane-local measurements per sibling page at the same
+width, covering shortest vs longest header at default and narrow widths,
+inspector closed and open, both navigation orders, plus resize after
+measurement to prove no stale height. Map each claim to its evidence and
+contract; unmeasured combinations stay unverified.
+
 ## Measurement ceilings
 
 Accessibility rectangles ([`XCUIElementAttributes`](https://developer.apple.com/documentation/xcuiautomation/xcuielementattributes)

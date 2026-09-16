@@ -82,6 +82,24 @@ become defaults. Normative field lists live in [data-format.md](data-format.md)
    because a newer OS style exists. Existing chrome and material choices
    are audited for consistency, not auto-replaced.
 
+## Shared header envelope (same family/environment only)
+
+Wrapped copy length itself is intentional, but downstream drift of shared
+shell anchors (controls baseline, divider, body start) across sibling pages
+at the same width violates the shared shell and is actionable.
+
+Where sibling headers in a declared same family and environment differ only
+by wrapping copy length, stabilize downstream anchors with a shared
+width-dependent, content-derived header/description envelope over sibling
+descriptions: a SwiftUI Layout or hidden accessibility-excluded sizing
+reference measuring all sibling descriptions live at the current width, height
+is the max. No hardcoded header height/line count, no truncation, no
+shortened copy, no per-page offsets, no historical max cache. Narrow widths
+and inspector-open re-resolve live; no stale height on resize. The envelope
+applies only within the declared same family/environment, never globally
+across every page. Preserve intentional Table-vs-List internal differences
+and system chrome.
+
 ## Optical alignment last
 
 Fix structural insets and baselines first. Equal frames can still

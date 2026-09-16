@@ -31,3 +31,14 @@ or universal SwiftUI refactoring engine. Numeric examples are synthetic.
 
 Hosted CI results are visible in the repository's Actions tab. A successful
 build or unit test run does not establish visual consistency of a user's app.
+
+## Shared-header correction
+
+A user found vertical controls/divider drift missed by the earlier title-only
+demonstration. The fixture now derives a shared description height from sibling
+copy at the offered width. Muse implemented the change and Grok reviewed it.
+Swift build passed. Manual captures checked all three pages at default width,
+shortest/longest descriptions at narrow width with inspector closed/open, and
+resizing back to wide. Controls/divider stayed aligned. Albums description
+truncation at minimum width remains a known limitation. This is focused visual
+verification, not a completed or scored full evaluation suite.

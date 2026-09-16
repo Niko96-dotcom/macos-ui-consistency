@@ -99,6 +99,30 @@ metric `leading`, family `browser`, variant `regular`.
   padding, or moves the native titlebar/toolbar. Any of these is an
   over-normalization failure even if (a) was fixed.
 
+## 6. Header-envelope vertical stability (shortest vs longest)
+
+**Prompt:** "Verify Tracks (shortest, one-line description) vs Albums/Playlists
+(longest, two-line) keep controls baseline, divider, and body start stable at
+the same width. Check default and narrow widths, inspector closed and open,
+both navigation orders (Tracks→Albums and Albums→Tracks), plus resize after
+measurement to prove no stale height. Do not hardcode heights, truncate,
+shorten copy, add per-page offsets, or cache a max."
+
+**Setup:** fixed build with shared width-dependent content-derived description
+envelope; capture per-page screenshots (or pane-local manual measures) at same
+width/environment for each combination; record window size, inspector state,
+navigation order, and post-resize re-measure.
+
+**Evaluation criteria:**
+
+- Pass: controls row, divider, and body top match across siblings within
+  tolerance at each width/inspector state, both orders, and after resize;
+  copy length and Table-vs-List internals untouched; system chrome untouched.
+- Fail: only title leading checked, one width or inspector state missing,
+  stale height after resize, or any hardcoded height/line count, truncation,
+  shortened copy, per-page offset, or cached max.
+- Validation is screenshot/manual evidence only; no automated tests claimed.
+
 ## Held-out strategy
 
 - Keep one page's expected value and one tolerance out of the prompt (e.g.,
