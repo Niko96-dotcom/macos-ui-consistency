@@ -126,7 +126,8 @@ navigation order, and post-resize re-measure.
 ## 7. Deliberate compact composition (no accidental stacking)
 
 **Prompt:** "Verify the compact variant is deliberate composition, not
-accidental stacking. At 700×450 with and without the 180pt inspector, check
+accidental stacking. At 560×450 (inspector deferred) and at wider widths
+with the inspector where still shown, check
 Tracks (shortest) vs Albums/Playlists (longest): controls sit directly below
 the subtitle with no huge reserved blank; Shuffle/Sort form an aligned
 label/control group (Grid, no arbitrary offsets) with a native menu Sort
@@ -137,8 +138,8 @@ directions, both navigation orders, and that shuffle/sort survive
 navigation/resize. Do not move native chrome, force equal heights, shrink
 controls, or touch the seeded +8 Playlists title."
 
-**Setup:** `--compact` (700×450) plus manual resize to 1000×650 and back;
-inspector closed and open; per-page screenshots (or pane-local manual
+**Setup:** `--compact` (560×450, inspector deferred) plus manual resize to 1000×650 and back;
+inspector closed and open where applicable; per-page screenshots (or pane-local manual
 measures) at each width/inspector state; record navigation order and
 post-resize re-measure; keep seeded Playlists +8 intact.
 
@@ -155,6 +156,61 @@ post-resize re-measure; keep seeded Playlists +8 intact.
   or selection, reset state, or any hardcoded height/offset/scale/chrome move.
 - Validation is screenshot/manual evidence only; no automated tests claimed
   and no pass without re-captured evidence.
+
+## 8. Sizing envelope and boundary proof (no source-only pass)
+
+**Prompt:** "Establish the usable sizing envelope before judging spacing.
+At normal (1000×650), compact (560×450 startup via --compact, policy
+minimum), 700pt sidebar-collapse boundary, and narrowest (drag
+beyond minimum and release back, both directions), with sidebar ×
+inspector (closed/closed, open/closed, closed/open, open/open) and both
+navigation orders, prove: no clipped primary control, no horizontal
+outer-page scroll, declared primary task stays operable (in this
+fixture sidebar yields before detail), compact Sort value and
+More alignment hold against the declared control column (not content
+leading or table gutters). Do not claim a fix from source declaration.
+Note: the fixture sets `minSize` before installing the hosting view in
+`main.swift`; rendered tiny-window clipping is confirmed, but that
+ordering as cause is hypothesis until runtime-tested. Better fixture
+implementation is owned by another worker — do not invent its outcome."
+
+**Setup:** live resize (not startup-compact only); per-page screenshots
+or pane-local manual measures at each state/combination/direction/order;
+record window content vs frame size, scale, inspector/sidebar state,
+scroll, locale.
+
+**Evaluation criteria:**
+
+- Pass: matrix covers normal/compact/narrowest × four sidebar/inspector
+  combos × both directions/orders with evidence paths; narrowest shows
+  operable controls, reversible collapse with button+menu+shortcut
+  fallback, Grid-aligned Sort/More against control column, About holds
+  full wrapped text; unmeasured combos marked `unverified`/`blocked`
+  with reasons, never pass.
+- Fail: startup-compact only, one direction only, missing inspector
+  combo, source-declaration claimed as pass, universal window number
+  asserted, Apple auto-collapse mandate claimed, comparison-app pixels
+  treated as requirements, or every differing edge flagged without
+  control-column vs gutter distinction.
+- Validation is screenshot/manual evidence only; no automated tests claimed.
+
+## Acceptance matrix (measurable, same width/environment)
+
+- No clipped primary control at narrowest supported width AND height.
+- No horizontal outer-page scroll; inner Table/List viewport scrolls.
+- Sidebar yields before detail in this fixture's browser family
+  (prioritize the declared primary task); any collapse reversible via persistent
+  accessible fallback.
+- Compact: no huge blank above controls; Sort value visible; More holds
+  all secondary actions with same identifiers/focus; state survives
+  resize/navigation.
+- Controls/divider/body anchors match across siblings within tolerance.
+
+## Negative controls (must stay excluded)
+
+Wrapped-copy length, Table-vs-List internals, inspector compact density,
+native titlebar/toolbar/traffic lights, system text-style sizes. Fixing
+any of these is an over-normalization failure.
 
 ## Held-out strategy
 

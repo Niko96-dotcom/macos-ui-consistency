@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import Combine
 
 // MARK: - Page model
 
@@ -44,9 +45,14 @@ enum LaunchConfig {
         CommandLine.arguments.contains("--aligned")
     }
 
-    /// `--compact` starts at the minimum content size (700x450) for verification.
+    /// `--compact` starts at the policy minimum content size for verification.
     static var isCompact: Bool {
         CommandLine.arguments.contains("--compact")
+    }
+
+    /// `--layout-diagnostics` prints window content/frame/min sizing (no private data).
+    static var isLayoutDiagnostics: Bool {
+        CommandLine.arguments.contains("--layout-diagnostics")
     }
 
     /// `--page tracks|albums|playlists`, default tracks. Supports `--page X` and `--page=X`.
@@ -79,6 +85,83 @@ enum ContentLayout {
     /// so all three titles read 24pt for reference screenshots.
     static var playlistTitleExtraLeading: CGFloat {
         LaunchConfig.isAligned ? 0 : 8
+    }
+}
+
+// MARK: - Window/view size policy (fixture-calibrated, deterministic)
+
+// Fixture width budget (content coordinates, not frame):
+// Sidebar 150 (min) + 1 divider; detail compact minimum 320
+// (24+24 padding + ~150 control column with native unshrunk Toggle/Menu +
+// ~70 label column + Table usability margin; narrower would clip
+// header/actions); inspector 180 + 1 divider (deferrable, never raises min).
+// Budget: sidebar + detail-min = 471; + inspector = 652.
+// Thresholds: inspector defers below 860 to keep a comfortable regular row;
+// sidebar collapses below 700 to preserve content first; hard stop 560 sits
+// below the collapse point so the collapsed state is seen before the minimum.
+// Height 450 fits header + controls + 220 list with outer scroll.
+// Visibility is derived live from total width (no stored copy, no resize
+// calls), so widening restores per user preference with no jitter loop.
+enum WindowPolicy {
+    static let contentMinWidth: CGFloat = 560
+    static let contentMinHeight: CGFloat = 450
+    static let contentDefaultWidth: CGFloat = 1000
+    static let contentDefaultHeight: CGFloat = 650
+    static var contentMinSize: NSSize {
+        NSSize(width: contentMinWidth, height: contentMinHeight)
+    }
+    static var contentDefaultSize: NSSize {
+        NSSize(width: contentDefaultWidth, height: contentDefaultHeight)
+    }
+    static let sidebarMinWidth: CGFloat = 150
+    static let sidebarIdealWidth: CGFloat = 170
+    static let sidebarMaxWidth: CGFloat = 180
+    static let inspectorWidth: CGFloat = 180
+    static let detailCompactMin: CGFloat = 320
+    static let sidebarCollapseThreshold: CGFloat = 700
+    static let inspectorDeferThreshold: CGFloat = 860
+}
+
+// User sidebar preference, separate from policy-constrained visibility.
+// Retained when the policy collapses the sidebar narrow; widening restores
+// per this value. Shared by toolbar, View menu, and shortcut via one
+// effective-visibility toggle (no duplicate policy).
+final class SidebarPreference: ObservableObject {
+    static let shared = SidebarPreference()
+    @Published var userShowsSidebar = true
+
+    /// Effective visibility from user intent plus total content width.
+    /// Nil width (first layout, non-compact) respects intent; `--compact`
+    /// startup initializes width to the 560pt policy minimum so first paint
+    /// already reflects collapse instead of squeezing after layout.
+    static func isEffectivelyVisible(userShows: Bool, contentWidth: CGFloat?) -> Bool {
+        guard userShows else { return false }
+        guard let w = contentWidth else { return true }
+        return w >= WindowPolicy.sidebarCollapseThreshold
+    }
+
+    /// Unified toggle based on EFFECTIVE visibility: if effectively visible
+    /// hide intent; if hidden (by intent or narrow policy) show intent and
+    /// widen the window to the collapse threshold when narrow. Callers pass
+    /// measured width (SwiftUI) or actual window content width (AppKit);
+    /// widening always re-checks the live window before resizing.
+    func toggleEffective(contentWidth: CGFloat?) {
+        let effective = Self.isEffectivelyVisible(userShows: userShowsSidebar, contentWidth: contentWidth)
+        if effective {
+            userShowsSidebar = false
+        } else {
+            userShowsSidebar = true
+            guard let window = NSApp.keyWindow ?? NSApp.windows.first else { return }
+            let measuredNarrow = contentWidth.map { $0 < WindowPolicy.sidebarCollapseThreshold } ?? true
+            if measuredNarrow {
+                let current = window.contentRect(forFrameRect: window.frame).size.width
+                if current < WindowPolicy.sidebarCollapseThreshold {
+                    var frame = window.frame
+                    frame.size.width += (WindowPolicy.sidebarCollapseThreshold - current)
+                    window.setFrame(frame, display: true)
+                }
+            }
+        }
     }
 }
 
@@ -199,6 +282,16 @@ private struct AvailableContentWidthKey: PreferenceKey {
 
 // Intrinsic requirement of the regular control row only (same pieces/spacing).
 private struct RegularControlsWidthKey: PreferenceKey {
+    static var defaultValue: CGFloat? { nil }
+    static func reduce(value: inout CGFloat?, nextValue: () -> CGFloat?) {
+        if let next = nextValue() {
+            value = next
+        }
+    }
+}
+
+// Total content width (window content, for sidebar/inspector policy only).
+private struct ContentWidthKey: PreferenceKey {
     static var defaultValue: CGFloat? { nil }
     static func reduce(value: inout CGFloat?, nextValue: () -> CGFloat?) {
         if let next = nextValue() {
@@ -337,7 +430,7 @@ struct DetailPane: View {
     var body: some View {
         // Viewport policy: the detail page scrolls vertically as one unit so
         // header, description, controls, and list all stay reachable at the
-        // 700x450 minimum (with or without the inspector). The inner
+        // policy minimum (with or without deferred inspector). The inner
         // Table/List keeps an explicitly bounded 220pt viewport and scrolls
         // internally; it never forces the outer page taller than the host.
         ScrollView(.vertical) {
@@ -390,9 +483,12 @@ struct DetailPane: View {
                         // Compact (intentional composition, not accidental stack):
                         // aligned label/control columns via Grid (no arbitrary
                         // offsets), native menu picker for Sort (no indent, no
-                        // shrink), secondary actions in labeled More menu.
-                        // Every action and selection stays reachable with the same
-                        // identifiers and focus.
+                        // shrink), secondary actions in labeled More menu placed
+                        // in the Grid with an empty label cell so Sort and More
+                        // control leading edges align with the Shuffle control
+                        // column. Native internal title/glyph padding may differ;
+                        // do not add offsets to compensate. Every action stays
+                        // reachable with the same identifiers and focus.
                         VStack(alignment: .leading, spacing: 12) {
                             Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 8) {
                                 GridRow {
@@ -409,13 +505,19 @@ struct DetailPane: View {
                                         .accessibilityHidden(true)
                                     sortMenuCompact
                                 }
+                                GridRow {
+                                    Text("")
+                                        .font(.body)
+                                        .gridColumnAlignment(.trailing)
+                                        .accessibilityHidden(true)
+                                    Menu("More") {
+                                        inspectorButton
+                                        infoButton
+                                    }
+                                    .accessibilityIdentifier("menu-more-\(page.rawValue)")
+                                    .accessibilityLabel("More actions")
+                                }
                             }
-                            Menu("More") {
-                                inspectorButton
-                                infoButton
-                            }
-                            .accessibilityIdentifier("menu-more-\(page.rawValue)")
-                            .accessibilityLabel("More actions")
                             DisclosureGroup {
                                 Text(pageDescriptions[page] ?? "")
                                     .font(.body)
@@ -515,8 +617,9 @@ struct DetailPane: View {
     private var pageBody: some View {
         // Bounded internal viewport: each list/table is exactly 220pt tall and
         // scrolls internally. Combined with the outer page ScrollView this keeps
-        // the root HStack within host bounds at 700x450 (no minHeight forcing
-        // outer overflow).
+        // the root HStack within host bounds at the policy minimum (no minHeight
+        // forcing outer overflow). Narrow Tables scroll natively horizontally;
+        // header/actions stay usable.
         switch page {
         case .tracks:
             Table(sampleTracks) {
@@ -570,7 +673,7 @@ struct DetailPane: View {
 /// It is a different surface family from the browser content titles and must be
 /// excluded from any content-title leading contract, not "fixed" into alignment.
 struct InspectorView: View {
-    @State private var volume = 0.5
+    @Binding var volume: Double
 
     var body: some View {
         // Vertical safe scroll: inspector content is small but must stay
@@ -598,7 +701,7 @@ struct InspectorView: View {
             .frame(maxWidth: .infinity, alignment: .topLeading)
         }
         .padding(10)
-        .frame(width: 180)
+        .frame(width: WindowPolicy.inspectorWidth)
         .frame(maxHeight: .infinity)
         .accessibilityIdentifier("inspector-pane")
     }
@@ -645,41 +748,157 @@ struct ContentView: View {
     // compact/regular branch switches never reset shuffle/sort.
     @State private var shuffle = false
     @State private var sortOrder = 0
+    // Lifted inspector state: single source preserved across pane/sheet
+    // transitions so narrow deferred sheet and wide pane share Volume.
+    @State private var inspectorVolume = 0.5
+    @ObservedObject private var sidebarPref = SidebarPreference.shared
+    @State private var measuredContentWidth: CGFloat? = LaunchConfig.isCompact ? WindowPolicy.contentMinWidth : nil
 
     init(initialPage: Page) {
         _selectedPage = State(initialValue: initialPage)
     }
 
+    // Derived-only policy (no stored visibility, no window resize calls):
+    // total-width measurement never feeds back into window size, so no loop.
+    // Nil (first layout, non-compact) respects the user request; `--compact`
+    // initializes to the 560pt policy minimum so first paint already reflects
+    // collapse; narrow widths correct live.
+    private var isSidebarVisible: Bool {
+        SidebarPreference.isEffectivelyVisible(userShows: sidebarPref.userShowsSidebar, contentWidth: measuredContentWidth)
+    }
+
+    private var isSidebarCollapsedByPolicy: Bool {
+        sidebarPref.userShowsSidebar && !isSidebarVisible
+    }
+
+    private var isInspectorVisible: Bool {
+        guard showInspector else { return false }
+        guard let w = measuredContentWidth else { return true }
+        return w >= WindowPolicy.inspectorDeferThreshold
+    }
+
+    /// Requested but deferred narrow: same inspector appears in a native
+    /// sheet (no silently disappearing toggle). Volume is shared via
+    /// `inspectorVolume` so pane/sheet transitions preserve it.
+    private var isInspectorDeferred: Bool {
+        showInspector && !isInspectorVisible
+    }
+
     var body: some View {
-        // Outer HStack stays within host bounds: fixed compact sidebar width
-        // leaves room for detail + inspector at 700pt, and the detail page
-        // scrolls instead of forcing the row taller than the window.
+        // Outer HStack stays within host bounds. Sidebar/inspector are optional:
+        // inspector defers first, then sidebar collapses, preserving usable
+        // detail (detailCompactMin) before the contentMin hard stop.
+        // Narrow Tables scroll natively inside their 220pt viewport;
+        // header/actions stay reachable via the outer vertical scroll.
         HStack(spacing: 0) {
-            SidebarView(selectedPage: $selectedPage)
-                .frame(minWidth: 150, idealWidth: 170, maxWidth: 180, minHeight: 0, maxHeight: .infinity)
-            Divider()
+            if isSidebarVisible {
+                SidebarView(selectedPage: $selectedPage)
+                    .frame(minWidth: WindowPolicy.sidebarMinWidth, idealWidth: WindowPolicy.sidebarIdealWidth, maxWidth: WindowPolicy.sidebarMaxWidth, minHeight: 0, maxHeight: .infinity)
+                Divider()
+            }
             DetailPane(page: selectedPage, showInspector: $showInspector, showInfo: $showInfo, shuffle: $shuffle, sortOrder: $sortOrder)
                 .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
-            if showInspector {
+            if isInspectorVisible {
                 Divider()
-                InspectorView()
+                InspectorView(volume: $inspectorVolume)
             }
         }
         .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
+        .background(
+            GeometryReader { proxy in
+                Color.clear.preference(key: ContentWidthKey.self, value: proxy.size.width)
+            }
+        )
+        .onPreferenceChange(ContentWidthKey.self) { next in
+            if measuredContentWidth != next {
+                measuredContentWidth = next
+            }
+        }
+        .toolbar {
+            ToolbarItem(placement: .navigation) {
+                Button(isSidebarVisible ? "Hide Sidebar" : "Show Sidebar") {
+                    // Unified effective-visibility toggle (shared with View
+                    // menu/shortcut): hidden by intent or narrow policy shows
+                    // intent and widens once to reveal; visible hides intent.
+                    sidebarPref.toggleEffective(contentWidth: measuredContentWidth)
+                }
+                .help(isSidebarCollapsedByPolicy ? "Sidebar is hidden below 700pt width. Activating widens the window to show it." : "")
+                .accessibilityIdentifier("button-toggle-sidebar")
+                .accessibilityLabel(isSidebarCollapsedByPolicy ? "Show sidebar by widening window" : (isSidebarVisible ? "Hide sidebar" : "Show sidebar"))
+            }
+            if !isSidebarVisible {
+                ToolbarItem(placement: .automatic) {
+                    Picker("Navigate", selection: $selectedPage) {
+                        ForEach(Page.allCases) { page in
+                            Text(page.title).tag(page)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .accessibilityIdentifier("nav-page-picker")
+                    .accessibilityLabel("Navigate")
+                }
+            }
+        }
+        .sheet(isPresented: Binding(
+            get: { isInspectorDeferred },
+            set: { newValue in if !newValue { showInspector = false } }
+        )) {
+            VStack(alignment: .leading) {
+                InspectorView(volume: $inspectorVolume)
+                HStack {
+                    Spacer()
+                    Button("Close") { showInspector = false }
+                        .keyboardShortcut(.cancelAction)
+                        .accessibilityIdentifier("button-close-inspector-sheet")
+                }
+            }
+            .padding(12)
+            .accessibilityIdentifier("inspector-sheet")
+        }
     }
 }
 
 // MARK: - App delegate with predictable window startup
 
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     var window: NSWindow!
+
+    /// Policy frame minimum for the current window chrome (titlebar/toolbar).
+    private func policyFrameMin(for sender: NSWindow) -> NSSize {
+        sender.frameRect(forContentRect: NSRect(origin: .zero, size: WindowPolicy.contentMinSize)).size
+    }
+
+    /// Interactive resize enforcement: clamp proposed FRAME so content never
+    /// goes below 560x450. Uses max(policy-derived, currently reported) so a
+    /// host/toolbar inflate is still respected, while a shrink below policy
+    /// cannot bypass it. Returns clamped size only (no setFrame, no loop).
+    func windowWillResize(_ sender: NSWindow, to frameSize: NSSize) -> NSSize {
+        let policyMin = policyFrameMin(for: sender)
+        var robustMin = policyMin
+        robustMin.width = max(robustMin.width, sender.minSize.width)
+        robustMin.height = max(robustMin.height, sender.minSize.height)
+        if sender.contentMinSize.width > 0 && sender.contentMinSize.height > 0 {
+            let reportedFrameMin = sender.frameRect(forContentRect: NSRect(origin: .zero, size: sender.contentMinSize)).size
+            robustMin.width = max(robustMin.width, reportedFrameMin.width)
+            robustMin.height = max(robustMin.height, reportedFrameMin.height)
+        }
+        var clamped = frameSize
+        clamped.width = max(clamped.width, robustMin.width)
+        clamped.height = max(clamped.height, robustMin.height)
+        if LaunchConfig.isLayoutDiagnostics {
+            let curFrame = sender.frame.size
+            let curContent = sender.contentRect(forFrameRect: sender.frame).size
+            print("layout-resize proposed=\(Int(frameSize.width))x\(Int(frameSize.height)) clamped=\(Int(clamped.width))x\(Int(clamped.height)) frame=\(Int(curFrame.width))x\(Int(curFrame.height)) content=\(Int(curContent.width))x\(Int(curContent.height)) minSize=\(Int(sender.minSize.width))x\(Int(sender.minSize.height)) contentMinSize=\(Int(sender.contentMinSize.width))x\(Int(sender.contentMinSize.height)) policyContentMin=\(Int(WindowPolicy.contentMinWidth))x\(Int(WindowPolicy.contentMinHeight)) policyFrameMin=\(Int(policyMin.width))x\(Int(policyMin.height)) robustMin=\(Int(robustMin.width))x\(Int(robustMin.height))")
+        }
+        return clamped
+    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         makeMainMenu()
-        let initialSize = LaunchConfig.isCompact
-            ? NSSize(width: 700, height: 450)
-            : NSSize(width: 1000, height: 650)
-        let contentRect = NSRect(origin: .zero, size: initialSize)
+        let initialContentSize = LaunchConfig.isCompact
+            ? WindowPolicy.contentMinSize
+            : WindowPolicy.contentDefaultSize
+        let contentRect = NSRect(origin: .zero, size: initialContentSize)
         window = NSWindow(
             contentRect: contentRect,
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
@@ -687,23 +906,70 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             defer: false
         )
         window.title = "Consistency Fixture"
-        window.minSize = NSSize(width: 700, height: 450)
         window.isRestorable = false
         let hosting = NSHostingView(rootView: ContentView(initialPage: LaunchConfig.initialPage))
         if #available(macOS 13.0, *) {
             hosting.sizingOptions = []
         }
         hosting.autoresizingMask = [.width, .height]
-        hosting.frame = NSRect(origin: .zero, size: initialSize)
+        hosting.frame = NSRect(origin: .zero, size: initialContentSize)
         window.contentView = hosting
-        window.setContentSize(initialSize)
+        window.setContentSize(initialContentSize)
+        // Enforced usable minimum AFTER host installation (content semantics).
+        // contentMinSize measures content and takes precedence over minSize,
+        // which measures the frame including titlebar. Setting minSize before
+        // contentView can be overridden by the host, allowing a tiny drag with
+        // clipped title/controls/sidebar. Derive the frame minimum from the
+        // content minimum so both agree. No resize loop.
+        window.contentMinSize = WindowPolicy.contentMinSize
+        let frameMinSize = window.frameRect(forContentRect: NSRect(origin: .zero, size: WindowPolicy.contentMinSize)).size
+        window.minSize = frameMinSize
+        window.delegate = self
+        if LaunchConfig.isLayoutDiagnostics {
+            let contentSize = window.contentView?.frame.size ?? .zero
+            let frameSize = window.frame.size
+            // Sizes and policy numbers only, for coordinator checks.
+            print("layout-diagnostics contentSize=\(Int(contentSize.width))x\(Int(contentSize.height)) frameSize=\(Int(frameSize.width))x\(Int(frameSize.height)) contentMinSize=\(Int(window.contentMinSize.width))x\(Int(window.contentMinSize.height)) minSize=\(Int(window.minSize.width))x\(Int(window.minSize.height)) policyContentMin=\(Int(WindowPolicy.contentMinWidth))x\(Int(WindowPolicy.contentMinHeight)) policyFrameMin=\(Int(frameMinSize.width))x\(Int(frameMinSize.height)) sidebarThreshold=\(Int(WindowPolicy.sidebarCollapseThreshold)) inspectorThreshold=\(Int(WindowPolicy.inspectorDeferThreshold))")
+        }
         window.center()
         window.makeKeyAndOrderFront(nil)
+        // Inspect post-makeKey host/toolbar overwrite once (no loop): hosting
+        // layout can reset minSize/contentMinSize after makeKey. Re-assert if
+        // smaller than policy and report both for triage. Observed tiny-drag
+        // failure is enforced via windowWillResize above; overwrite ordering
+        // alone is not claimed as proven root cause.
+        DispatchQueue.main.async { [weak self] in
+            guard let self, let w = self.window else { return }
+            let policyMin = self.policyFrameMin(for: w)
+            var didFix = false
+            if w.contentMinSize.width < WindowPolicy.contentMinWidth - 0.5 || w.contentMinSize.height < WindowPolicy.contentMinHeight - 0.5 {
+                w.contentMinSize = WindowPolicy.contentMinSize
+                didFix = true
+            }
+            if w.minSize.width < policyMin.width - 0.5 || w.minSize.height < policyMin.height - 0.5 {
+                w.minSize = policyMin
+                didFix = true
+            }
+            if LaunchConfig.isLayoutDiagnostics {
+                let contentSize = w.contentView?.frame.size ?? .zero
+                let frameSize = w.frame.size
+                print("layout-diagnostics post-makeKey contentSize=\(Int(contentSize.width))x\(Int(contentSize.height)) frameSize=\(Int(frameSize.width))x\(Int(frameSize.height)) contentMinSize=\(Int(w.contentMinSize.width))x\(Int(w.contentMinSize.height)) minSize=\(Int(w.minSize.width))x\(Int(w.minSize.height)) policyFrameMin=\(Int(policyMin.width))x\(Int(policyMin.height)) didFix=\(didFix)")
+            }
+        }
         NSApp.activate(ignoringOtherApps: true)
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         return true
+    }
+
+    @objc private func toggleSidebarFromMenu(_ sender: Any?) {
+        // Unified effective-visibility toggle shared with the toolbar:
+        // uses the live window content width so an auto-collapsed sidebar
+        // (request true, width narrow) reveals instead of hiding.
+        let window = NSApp.keyWindow ?? NSApp.windows.first ?? self.window
+        let actualWidth: CGFloat? = window.map { $0.contentRect(forFrameRect: $0.frame).size.width }
+        SidebarPreference.shared.toggleEffective(contentWidth: actualWidth)
     }
 
     private func makeMainMenu() {
@@ -715,6 +981,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         appMenu.addItem(withTitle: "About Consistency Fixture", action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
         appMenu.addItem(NSMenuItem.separator())
         appMenu.addItem(withTitle: "Quit Consistency Fixture", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        let viewMenuItem = NSMenuItem()
+        mainMenu.addItem(viewMenuItem)
+        let viewMenu = NSMenu(title: "View")
+        viewMenuItem.submenu = viewMenu
+        let toggleItem = viewMenu.addItem(withTitle: "Toggle Sidebar", action: #selector(toggleSidebarFromMenu(_:)), keyEquivalent: "s")
+        toggleItem.keyEquivalentModifierMask = [.command, .control]
+        toggleItem.target = self
         NSApp.mainMenu = mainMenu
     }
 }

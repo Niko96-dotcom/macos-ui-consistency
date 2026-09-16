@@ -1,8 +1,15 @@
 # Consistency Fixture
 
-Small real native macOS SwiftUI fixture for the macOS UI consistency skill.
+Small real native macOS SwiftUI fixtures for the macOS UI consistency skill.
 SwiftUI + AppKit only, no packages. Deterministic local in-memory data only —
 no accounts, files, or network.
+
+Two targets share one package:
+
+- `ConsistencyFixture` — browser family (Tracks / Albums / Playlists sidebar
+  + detail pane). See below.
+- `SettingsFixture` — settings family (single form, Grid label/control
+  columns, no sidebar/inspector/envelope). See [Settings fixture](#settings-fixture-second-family-probe).
 
 ## Sources (relative paths)
 
@@ -43,18 +50,48 @@ swift run --package-path fixture ConsistencyFixture --compact
 swift run --package-path fixture ConsistencyFixture --page tracks --compact
 ```
 
-Window: titled `Consistency Fixture`, initial content 1000×650 (or 700×450
-with `--compact`), minimum 700×450, resizable, no frame persistence
-(no autosave/restoration), with a normal app menu including Quit.
-Content stays within that size: nothing raises the minimum or enlarges
-the window to fit.
+Layout diagnostics (window sizes only, no private data, for coordinator checks):
 
-## Layout / viewport policy (compact 700×450 stays reachable)
+```sh
+swift run --package-path fixture ConsistencyFixture --layout-diagnostics
+swift run --package-path fixture ConsistencyFixture --compact --layout-diagnostics
+```
+
+With `--layout-diagnostics`, startup prints `layout-diagnostics` (content/frame,
+`contentMinSize`/`minSize`, policy content/frame minima, thresholds), a
+`post-makeKey` line re-checks host/toolbar overwrites once (re-asserts if below
+policy, no loop), and every interactive resize prints a `layout-resize` line
+with proposed/clamped, current frame/content, `minSize`/`contentMinSize`, and
+policy/robust minima for coordinator stdout collection.
+
+Window: titled `Consistency Fixture`, initial content 1000×650 (or 560×450
+with `--compact`), minimum content 560×450 enforced after host install via
+`contentMinSize` (content semantics, takes precedence) plus derived frame
+`minSize` (frame including titlebar) **plus `windowWillResize` delegate clamp
+of the proposed frame** (`frameRect(contentMin)` vs currently reported
+`minSize`/`contentMinSize`, max wins, return-only, no `setFrame` loop), so a
+real interactive drag cannot shrink below 560×450 content. Resizable, no frame persistence
+(no autosave/restoration), with app + View (Toggle Sidebar) menus including Quit.
+Content stays within that size: nothing raises the minimum or enlarges
+the window to fit. `minSize`/`contentMinSize` declaration alone before/after
+`contentView` is not enforcement (host/toolbar layout can overwrite after
+`makeKey`; overwrite ordering alone is not claimed as proven root cause).
+Width budget (content): sidebar 150 + detail compact-min 320 (=471) and
++ inspector 180 (=652); inspector defers below 860, sidebar collapses below
+700 to preserve content first, hard stop 560 sits below collapse so the
+collapsed state is seen before the minimum. Height minimum 450 fits header +
+controls + 220 list with outer scroll. Visibility is derived live (no resize
+loop); widening restores per user preference. Drag-test the hard stop manually;
+source scans cannot prove it.
+
+## Layout / viewport policy (compact 560×450 stays reachable)
 
 - Detail page scrolls vertically as one unit, so header, subtitle,
-  description, controls, and list remain reachable at 700×450 with or
-  without the inspector. A known limitation on macOS 26: long description
-  text can truncate with the inspector open at minimum width. This is
+  description, controls, and list remain reachable at 560×450 with deferred
+  inspector (inspector defers below 860 rather than squeezing content).
+  A known limitation on macOS 26: long description
+  text can truncate with the inspector open at wider widths where it is still
+  shown. This is
   not a clean text-wrapping negative control; record it separately in audits.
 - Each Table/List keeps an explicitly bounded 220pt-tall viewport and
   scrolls internally; the fixed height never forces the outer row beyond
@@ -63,13 +100,28 @@ the window to fit.
   wide row first, compact group second. Compact uses a `Grid` with aligned
   label/control columns (no arbitrary offsets), native readable sizes (no
   scaling/shrinking), `Picker(.menu)` for Sort (no segmented indent), and a
-  labeled `More` menu (`menu-more-*`) holding Show Inspector / Info with the
-  same identifiers. Shared Toggle/Picker/Button pieces are reused in both
-  branches (no duplicated giant layouts). Shuffle/sort state lives in
+  labeled `More` menu (`menu-more-*`) in its own `GridRow` with an empty label
+  cell so Sort popup and More control leading edges align with the Shuffle
+  control column (native internal title/glyph padding may differ; no offsets).
+  It holds Show Inspector / Info with the same identifiers. Shared
+  Toggle/Picker/Button pieces are reused in both branches (no duplicated giant
+  layouts). Shuffle/sort state lives in
   `ContentView` so page changes, resizes, and branch switches never reset it.
-- Sidebar is constrained to 150–180pt (ideal 170) so the inspector
-  (180pt, vertically scrollable) does not squeeze the detail pane
-  unusably narrow. Outer `HStack` is bounded to host bounds.
+- Sidebar is constrained to 150–180pt (ideal 170); inspector is 180pt and
+  vertically scrollable. Outer `HStack` is bounded to host bounds. Adaptive
+  policy: inspector defers below 860pt content width (requested narrow shows
+  the same inspector in a native `inspector-sheet` with shared Volume state,
+  restores as pane on widen; Show/Hide stays in regular row and compact
+  More menu, no silently disappearing toggle), sidebar auto-collapses below
+  700pt (retains user preference in
+  `SidebarPreference`, restores on widen; `button-toggle-sidebar` toolbar and
+  View menu Toggle Sidebar (Ctrl-Cmd-S) share one effective-visibility toggle:
+  Hide only when effectively visible, otherwise Show with widen-to-reveal when
+  narrow, and `nav-page-picker` menu picker keeps nav
+  reachable whenever sidebar is not visible by intent or constraint). Hard-stop content minimum is 560×450, below the
+  collapse point. Test default `swift run --package-path fixture
+  ConsistencyFixture` and minimum `swift run --package-path fixture
+  ConsistencyFixture --compact` plus a manual drag to the hard stop.
 
 ## Header envelope (vertical stability across sibling pages)
 
@@ -123,12 +175,13 @@ the window to fit.
 - Long / wrapping descriptions and different content text lengths per page
   (see the compact-width limitation above).
 - Deliberate compact composition (control-fit fallback): `Grid`-aligned
-  Shuffle/Sort columns, native menu Sort picker, `More` menu for secondary
+  Shuffle/Sort columns with `More` in its own `GridRow` (empty label cell),
+  native menu Sort picker, `More` menu for secondary
   actions, and below-controls `About this view` disclosure holding the full
   description. Cramped mixed stacks (misaligned labels, indented segmented
   label, buttons crammed below a blank) are not this variant; the declared
-  variant above is the pass target at 700×450 with or without the 180pt
-  inspector.
+  variant above is the pass target at 560×450 (inspector deferred) and at
+  wider widths with the 180pt inspector where still shown.
 - Compact inspector (`inspector-pane`): tighter spacing, smaller type, different
   family — excluded from any content-title contract. It scrolls vertically
   if needed at short heights.
@@ -143,9 +196,11 @@ the window to fit.
 
 Page titles (`page-title-*`), subtitles, descriptions (`page-description-*` in
 regular envelope or compact disclosure), bodies (`page-body-*`),
-page buttons (`page-button-*`), `button-toggle-inspector`, `button-show-info`,
+page buttons (`page-button-*`), `button-toggle-sidebar`, `nav-page-picker`
+(whenever sidebar is not visible), `button-toggle-inspector`, `button-show-info`,
 compact `menu-more-*` and `disclosure-about-*`,
-`button-close-info`, `info-sheet`, `inspector-pane`. There is no runtime
+`button-close-info`, `info-sheet`, `inspector-pane`, `inspector-sheet` and
+`button-close-inspector-sheet` (narrow deferred sheet sharing inspector Volume). There is no runtime
 measure exporter and no fabricated geometric evidence in this fixture.
 
 ## Static tests note
@@ -155,3 +210,45 @@ claimed here. Static/source-only scans supplied separately cannot prove
 runtime geometry. Passing a source scan is not a visual pass. Any alignment
 claim requires captured screenshots (or manual measurement) mapped to a
 declared contract before/after the change.
+
+## Settings fixture (second-family probe)
+
+A minimal settings form proving the skill transfers beyond the browser
+family. No sidebar, no inspector, no header envelope, no divider/body
+anchors — the shared contract is Grid label/control columns only.
+
+- `fixture/Sources/SettingsFixture/main.swift` — app: `NSApplication`
+  delegate + `NSHostingView`, one `Grid` form (Theme / Default view /
+  Show notifications / Cache size), help text locked to the control
+  column, long-locale copy variant.
+- Declared contract (app-decision, `settings/regular`, pane-local):
+  every control leading == 162pt (`labelColumnWidth` 150 + `columnGap`
+  12) ± 0.5.
+- **Seeded (default):** the notifications Toggle adds +12pt extra leading
+  (`SettingsLayout.notificationsExtraLeading`), so it reads 174pt
+  against the 162pt contract. This is the **one genuine defect**.
+- **Aligned (`--aligned`):** the extra is 0; all four controls read 162pt.
+  Reference mode only, not repair proof.
+- **Long locale (`--long-locale`):** longer label/help copy. Wrapping and
+  row-height growth are expected intentional variants; columns must hold.
+- **Contract print (`--print-contract`):** prints declared values and
+  exits before launching any UI. Declared inputs only, never measured
+  geometry.
+
+```sh
+swift build --package-path fixture
+swift run --package-path fixture SettingsFixture
+swift run --package-path fixture SettingsFixture --aligned
+swift run --package-path fixture SettingsFixture --long-locale
+swift run --package-path fixture SettingsFixture --print-contract
+swift run --package-path fixture SettingsFixture --layout-diagnostics
+```
+
+Window: titled `Settings Fixture`, initial content 480×360, minimum
+content 400×300. Intended variants (do not "fix"): long-locale wrapping,
+row-height growth, help-text length. There is no runtime measure
+exporter and no fabricated geometric evidence in this fixture.
+
+Accessibility identifiers: `settings-label-*`, `settings-control-*`
+(`theme`, `default-view`, `notifications`, `cache`), plus
+`settings-help-default-view`.

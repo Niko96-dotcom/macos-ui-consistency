@@ -7,12 +7,17 @@ let package = Package(
         .macOS(.v13)
     ],
     products: [
-        .executable(name: "ConsistencyFixture", targets: ["ConsistencyFixture"])
+        .executable(name: "ConsistencyFixture", targets: ["ConsistencyFixture"]),
+        .executable(name: "SettingsFixture", targets: ["SettingsFixture"]),
     ],
     targets: [
         .executableTarget(
             name: "ConsistencyFixture",
             path: "Sources/ConsistencyFixture"
-        )
+        ),
+        .executableTarget(
+            name: "SettingsFixture",
+            path: "Sources/SettingsFixture"
+        ),
     ]
 )
