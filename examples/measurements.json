@@ -1,0 +1,104 @@
+{
+  "_note": "SYNTHETIC fixture only; NOT actual runtime evidence. Consistent with references/data-format.md.",
+  "schema_version": 1,
+  "surfaces": [
+    {
+      "environment_id": "fixture-regular",
+      "family": "browser",
+      "id": "albums",
+      "measurements": [
+        {
+          "coordinate_space": "pane-local",
+          "evidence": [
+            "evidence/albums.png"
+          ],
+          "method": "manual",
+          "metric": "leading",
+          "role": "contentTitle",
+          "uncertainty": 0.1,
+          "unit": "pt",
+          "value": 24
+        }
+      ],
+      "owner": "app",
+      "status": "captured",
+      "variant": "regular"
+    },
+    {
+      "environment_id": "fixture-regular",
+      "family": "browser",
+      "id": "tracks",
+      "measurements": [
+        {
+          "coordinate_space": "pane-local",
+          "evidence": [
+            "evidence/tracks.png"
+          ],
+          "method": "manual",
+          "metric": "leading",
+          "role": "contentTitle",
+          "uncertainty": 0,
+          "unit": "pt",
+          "value": 24
+        }
+      ],
+      "owner": "app",
+      "status": "captured",
+      "variant": "regular"
+    },
+    {
+      "environment_id": "fixture-regular",
+      "family": "browser",
+      "id": "playlists",
+      "measurements": [
+        {
+          "coordinate_space": "pane-local",
+          "evidence": [
+            "evidence/playlists.png"
+          ],
+          "method": "manual",
+          "metric": "leading",
+          "role": "contentTitle",
+          "uncertainty": 0.1,
+          "unit": "pt",
+          "value": 32
+        }
+      ],
+      "owner": "app",
+      "status": "captured",
+      "variant": "regular"
+    },
+    {
+      "environment_id": "fixture-regular",
+      "family": "inspector",
+      "id": "inspector-compact",
+      "measurements": [
+        {
+          "coordinate_space": "pane-local",
+          "evidence": [
+            "evidence/inspector.png"
+          ],
+          "method": "manual",
+          "metric": "leading",
+          "role": "contentTitle",
+          "uncertainty": 0.1,
+          "unit": "pt",
+          "value": 16
+        }
+      ],
+      "owner": "app",
+      "status": "captured",
+      "variant": "compact"
+    },
+    {
+      "environment_id": "fixture-regular",
+      "family": "browser",
+      "id": "hidden-sheet",
+      "measurements": [],
+      "owner": "app",
+      "reason": "hidden behind permission gate; fixture unavailable",
+      "status": "blocked",
+      "variant": "regular"
+    }
+  ]
+}

@@ -1,0 +1,69 @@
+{
+  "findings": [
+    {
+      "actual": 24,
+      "evidence": [
+        "evidence/albums.png"
+      ],
+      "expected": 24,
+      "reason": "delta 0 within tolerance 0.5 (uncertainty 0.1)",
+      "rule_id": "browser-title",
+      "status": "pass",
+      "surface_id": "albums"
+    },
+    {
+      "actual": null,
+      "evidence": [],
+      "expected": 24,
+      "reason": "surface status blocked: hidden behind permission gate; fixture unavailable",
+      "rule_id": "browser-title",
+      "status": "unverified",
+      "surface_id": "hidden-sheet"
+    },
+    {
+      "actual": null,
+      "evidence": [],
+      "expected": 24,
+      "reason": "family/variant mismatch: rule browser/regular vs surface inspector/compact",
+      "rule_id": "browser-title",
+      "status": "excluded",
+      "surface_id": "inspector-compact"
+    },
+    {
+      "actual": 32,
+      "evidence": [
+        "evidence/playlists.png"
+      ],
+      "expected": 24,
+      "reason": "delta 8 exceeds tolerance 0.5 (uncertainty 0.1)",
+      "rule_id": "browser-title",
+      "status": "fail",
+      "surface_id": "playlists"
+    },
+    {
+      "actual": 24,
+      "evidence": [
+        "evidence/tracks.png"
+      ],
+      "expected": 24,
+      "reason": "delta 0 within tolerance 0.5 (uncertainty 0)",
+      "rule_id": "browser-title",
+      "status": "pass",
+      "surface_id": "tracks"
+    }
+  ],
+  "kind": "comparison",
+  "limitations": [
+    "compares declared numeric metrics only; no inferred semantics or screenshot analysis",
+    "supplied-evidence quality remains agent responsibility; uncertainty=0 does not prove manual measurement exact",
+    "empty contracts/measurements are invalid, never green",
+    "no exhaustive app coverage claim; unmeasured is unverified, never pass"
+  ],
+  "schema_version": 1,
+  "summary": {
+    "excluded": 1,
+    "fail": 1,
+    "pass": 2,
+    "unverified": 1
+  }
+}

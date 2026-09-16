@@ -1,0 +1,4 @@
+interface:
+  display_name: "Mac UI Consistency"
+  short_description: "Align native Mac UI with verified evidence"
+  default_prompt: "Use $macos-ui-consistency to audit this native Mac app and repair clear app-owned inconsistencies with before/after verification."

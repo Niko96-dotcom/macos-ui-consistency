@@ -1,0 +1,19 @@
+{
+  "_note": "SYNTHETIC fixture only; NOT actual runtime evidence. Consistent with references/data-format.md.",
+  "rules": [
+    {
+      "authority": "app-decision",
+      "coordinate_space": "pane-local",
+      "environment_id": "fixture-regular",
+      "expected": 24,
+      "family": "browser",
+      "id": "browser-title",
+      "metric": "leading",
+      "role": "contentTitle",
+      "tolerance": 0.5,
+      "unit": "pt",
+      "variant": "regular"
+    }
+  ],
+  "schema_version": 1
+}

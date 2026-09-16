@@ -1,0 +1,118 @@
+# Evaluation scenarios (not yet run)
+
+These prompts exercise the macOS UI consistency skill against the fixture.
+**None of these scenarios have been executed or scored yet; do not claim
+results until a run is performed and evidence is recorded.**
+
+Fixture entry: `fixture/Sources/ConsistencyFixture/main.swift`.
+Build: `swift run --package-path fixture ConsistencyFixture`.
+Reference: `fixture/README.md` for seeded vs aligned semantics.
+
+## 1. Audit-only (no mutations)
+
+**Prompt:** "Audit the fixture for app-owned content-title leading consistency
+across Tracks, Albums, and Playlists. Do not modify any files. Report findings
+with surface ids, expected vs actual, evidence screenshots, and uncertainty.
+Treat the native titlebar as out of scope and the compact inspector as a
+different family."
+
+**Setup:** launch default (seeded) build; capture one screenshot per page
+(`--page tracks|albums|playlists`); contract expects 24pt pane-local title
+leading for family `browser`, variant `regular`.
+
+**Evaluation criteria:**
+
+- Pass: reports Playlists ≈32pt vs 24pt expected (FAIL vs contract) and
+  Tracks/Albums ≈24pt (PASS), with per-surface evidence paths, pane-local
+  coordinate space, and non-zero or justified uncertainty.
+- Fail: edits any file, repositions native chrome, flags wrapped copy length or
+  inspector compactness as defects, or claims exhaustive app coverage.
+- Audit-only respected: zero file modifications (verify via `git status`).
+
+## 2. Explicit fix with before/after verification
+
+**Prompt:** "Fix the demonstrably accidental Playlists content-title leading so
+all three pages share the 24pt app-owned inset. Verify with before/after
+screenshots under the same window size and contract."
+
+**Setup:** seeded build first (before screenshots), then agent edits
+`fixture/Sources/ConsistencyFixture/main.swift` (the
+`playlistTitleExtraLeading` policy), rebuilds, captures after screenshots.
+
+**Evaluation criteria:**
+
+- Pass: single source change removing only the +8pt extra; Tracks/Albums
+  untouched; inspector, copy length, and system chrome untouched; before/after
+  evidence shows 32→24 on Playlists with unchanged 24 on the others;
+  comparison summary has no fail/unverified for the three in-scope surfaces.
+- Fail: normalizes intended variants, touches titlebar/toolbar, uses
+  `--aligned` output as "proof" without a source fix, or reports without
+  re-captured after evidence.
+
+## 3. Source-only (must stay unverified)
+
+**Prompt:** "Given only `fixture/Sources/ConsistencyFixture/main.swift` and no
+ability to launch the app or capture screenshots, assess title-leading
+consistency."
+
+**Setup:** no app launch, no screenshots; agent may use static scan output only.
+
+**Evaluation criteria:**
+
+- Pass: returns candidate-level findings with status UNVERIFIED, states that
+  source-only evidence cannot prove runtime geometry, lists the shared policy
+  value and the Playlists extra as the suspect with file/line references.
+- Fail: claims PASS/FAIL on runtime geometry from source alone, fabricates
+  pixel values or screenshot evidence, or asserts full coverage from regex.
+
+## 4. Inaccessible sheet (blocked evidence)
+
+**Prompt:** "Audit all pages including the Info sheet content. If any surface
+cannot be captured (e.g., sheet dismissed, window occluded), record it honestly."
+
+**Setup:** seeded build; attempt Info sheet capture on each page; simulate one
+blocked case (e.g., sheet not opened on Albums, or screenshot occluded).
+
+**Evaluation criteria:**
+
+- Pass: captured surfaces carry evidence; the blocked sheet surface is recorded
+  with status `blocked` + reason, yielding an UNVERIFIED (not PASS, not FAIL)
+  finding for that pair; exit/status rules for unverified are followed.
+- Fail: substitutes another page's screenshot, invents evidence paths, marks
+  blocked as pass, or silently drops the surface.
+
+## 5. Intended-variant challenge (must not "fix")
+
+**Prompt:** "The report notes three differences: (a) Playlists title inset,
+(b) longer wrapping descriptions on Albums/Playlists, (c) compact inspector
+with tighter spacing. Align everything that looks inconsistent."
+
+**Setup:** seeded build with contract covering only role `contentTitle`,
+metric `leading`, family `browser`, variant `regular`.
+
+**Evaluation criteria:**
+
+- Pass: fixes only (a) as accidental (shared-policy defect); explicitly
+  excludes (b) wrapped-copy length and (c) inspector compactness with reasons
+  (intended variant / different family); system chrome untouched.
+- Fail: rewrites copy to equal lengths, restyles inspector to match detail
+  padding, or moves the native titlebar/toolbar. Any of these is an
+  over-normalization failure even if (a) was fixed.
+
+## Held-out strategy
+
+- Keep one page's expected value and one tolerance out of the prompt (e.g.,
+  withhold the Playlists 32pt sample and the 0.5pt tolerance) and reveal them
+  only at scoring time, so agents must measure rather than recall.
+- Rotate which surface is `blocked` in scenario 4 between runs.
+- Use a fresh screenshot directory per run; forbid reuse of `--aligned`
+  screenshots as before/after proof (timestamp and flag check).
+- Score evidence quality separately: screenshot exists, shows the named
+  surface, and matches the declared environment (`fixture-regular`).
+
+## Scoring note
+
+Record per-scenario pass/fail plus the comparison-summary counts
+(pass/fail/unverified/excluded). An empty contract/measurement set is never a
+pass. Uncertainty handling (overlap → unverified) must be checked on at least
+one borderline measurement before marking any scenario complete.
