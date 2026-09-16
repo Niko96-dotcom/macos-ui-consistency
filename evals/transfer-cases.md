@@ -1,11 +1,12 @@
-# Transfer cases (not yet run)
+# Transfer cases (scored 2026-09-16, this host)
 
-These cases test whether the skill transfers beyond one fixture to
-contrasting macOS tasks. **None have been executed or scored; do not
-claim results or benchmark standing until a run is performed and
-evidence is recorded.** No test-app edits are permitted in any case;
-audit-only unless a case explicitly authorizes a scoped repair with
-before/after evidence.
+Cases 1–5 were executed against dedicated fixture apps on this Mac (Dark
+appearance, 2x Retina) and all passed; per-case records live in
+`.audit/case1` … `.audit/case5` (gitignored working material) with the
+scoring notes below. Case 5 additionally passed a blinded agent run
+(`.audit/case5-blind/report.md`). No test-app edits were made during any
+case run; audit-only unless stated. Evidence: `docs/images/case*` plus
+instrumented `--dump-geometry` values quoted per case.
 
 General protocol (runnable or manual): declare a per-family relational
 contract first; capture screenshots or pane-local manual measures at the
@@ -34,6 +35,12 @@ growth from wrapping; system text-style sizes.
 shrinking fonts; forcing one equal width across unrelated groups;
 repositioning native chrome.
 
+**Run 2026-09-16 (SettingsFixture): PASS.** Default + minimum widths ×
+base + long locales: shared control column holds in all four cells
+(162.0 good rows, 174.0 seeded row instrumented; screenshot leadings
+agree differentially to the pixel). Longer wrapped copy, row-height
+growth, and system sizes excluded. Zero file modifications.
+
 ## 2. Document editor — essential inspector, optional navigation
 
 **Setup/input:** editor where the inspector is the essential editor for
@@ -55,6 +62,12 @@ assuming every inspector is optional; universally requiring button +
 menu + shortcut where the app provides a different accessible fallback;
 changing meaning or info hierarchy without design intent.
 
+**Run 2026-09-16 (EditorFixture): PASS.** Narrow (700): fixed 300pt
+format bar overflows the 200pt inspector pane (instrumented + slider
+visibly cut at the window edge) → FAIL as expected; `--aligned` wrapped
+rows fit → reachable. Inspector never collapsed; nav optionality
+untouched.
+
 ## 3. Dense workspace — deliberate pane constraints, inner scroll
 
 **Setup/input:** dense timeline workspace with app-declared constrained
@@ -73,6 +86,15 @@ contract declares intentional.
 **Forbidden edits:** removing deliberate pane constraints or inner
 scroll to force everything to fit; normalizing intentional gutter
 differences by type alone; claiming every differing edge inconsistent.
+
+**Run 2026-09-16 (WorkspaceFixture): PASS.** Narrow (560): 460pt
+transport spans past the 410pt viewport with Snap clipped off-window and
+no declared outer scroll → FAIL as expected; `--aligned` fills the
+viewport exactly inside the declared horizontal ScrollView with all six
+transport buttons AX-exposed. Caveat: synthetic wheel events did not move
+the scroller (harness limit); reachability rests on construction +
+widen demo + AX exposure. Pane constraints and inner timeline scroll
+kept.
 
 ## 4. Small fixed-size utility — no sidebar, no resize
 
@@ -93,6 +115,11 @@ overflow menu/disclosure the app never declared; applying visual scaling
 to hide a fit failure (native small/mini sizes in context remain
 allowed).
 
+**Run 2026-09-16 (UtilityFixture): PASS.** Declared fixed 320×200:
+programmatic resize refused (stays put); all three controls visible;
+Start AX-clicked with `utility-action-fired` observed. Correct outcome
+for a sound utility is no finding; no matrix/collapse/overflow demanded.
+
 ## 5. Adversarial — majority shared pattern is wrong
 
 **Setup/input:** four sibling screens where three share the same copied
@@ -110,3 +137,9 @@ minority passes. Report must cite the contract, not frequency.
 treating frequency or majority alone as justification; inferring a
 heuristic taste call as certain to fix it; silently re-baselining a
 reference to quiet the failure.
+
+**Run 2026-09-16 (AdversarialFixture, blinded): PASS.** A fresh agent
+given only the skill, the contract (162), and the measurements
+(174/174/174/162) failed the majority against the contract with exact
+math, passed the minority, kept scope honesty, and explicitly refused to
+re-baseline — with zero file modifications.

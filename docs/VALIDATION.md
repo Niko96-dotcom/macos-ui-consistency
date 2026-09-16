@@ -171,8 +171,9 @@ states got deterministic launch flags (`--inspector-open`,
   attempts failed on a shared live desktop), so that criterion is
   untested, never passed.
 - **S8 sizing envelope: PASS.** Programmatic resize to 200×200 clamps to
-  560×502 on all 4 pane combos (exercises the same `windowWillResize`
-  delegate path as drag; true pointer-drag untested). Narrowest state
+  560×502 on all 4 pane combos (later re-proven with true Quartz-driven
+  width and height drags: 860→200 clamps 560 wide, 702→202 clamps 502
+  frame height, drag-back restores; see follow-ups). Narrowest state
   keeps nav (picker + Show Sidebar), no clipped primary control;
   inspector sheet works at minimum with retained state; Ctrl-Cmd-S
   restores sidebar + widens 560→700. Open question: Ctrl-Cmd-S with the
@@ -183,3 +184,58 @@ Remaining gaps (not hidden): About-expand capture, true pointer-drag,
 VoiceOver, transfer-case protocol runs, held-out rotation scoring.
 Privacy: all evidence frames are fixture-window pixels only; captures
 containing desktop content were deleted, never committed.
+
+## Transfer cases — all scored (2026-09-16, this host)
+
+Four dedicated fixture apps (same conventions: `--dump-geometry`,
+seeded/aligned flags, deterministic entries) close the protocol:
+
+- **Case 1 settings (SettingsFixture): PASS.** Default + minimum widths
+  × base + long locales: control column holds in all four cells
+  (162.0/174.0 instrumented; screenshot differentials pixel-exact);
+  wrapping/row-growth/system sizes excluded; zero file modifications.
+- **Case 2 editor (EditorFixture): PASS.** Narrow (700): fixed 300pt bar
+  overflows the 200pt inspector pane (instrumented + slider visibly cut)
+  → FAIL as expected; aligned wraps fit. Inspector never collapsed; nav
+  optionality untouched.
+- **Case 3 workspace (WorkspaceFixture): PASS.** Narrow (560): 460pt
+  transport exceeds the 410pt viewport with Snap clipped off-window, no
+  declared outer scroll → FAIL as expected; aligned fills the viewport in
+  the declared ScrollView with all six buttons AX-exposed. Caveat:
+  synthetic wheel events did not move the scroller (harness limit).
+- **Case 4 utility (UtilityFixture): PASS.** Fixed 320×200 refuses
+  resize; all controls visible; Start AX-click fires observably. No
+  matrix/collapse/overflow demanded; no-resize N/A justified.
+- **Case 5 adversarial (AdversarialFixture): PASS, blinded.** A fresh
+  agent with only skill + contract (162) + measurements (174/174/174/162)
+  failed the majority with exact math, passed the minority, refused to
+  re-baseline, modified nothing (`.audit/case5-blind/report.md`).
+
+## Follow-up findings from the scoring campaign
+
+- **True pointer-drag boundary: PASS.** Quartz-driven right-edge drag
+  toward 200 clamps at 560 wide; bottom-edge drag clamps at 502 frame
+  height; drag-back restores. Same `windowWillResize` path as the
+  programmatic resizes — the S8 verdict now rests on real drags.
+- **Keyboard: shortcuts/Escape/Return proven** (Ctrl-Cmd-S restores +
+  widens; Escape and Return dismiss sheets). Table arrows N/A (no
+  selection model). **Tab order undetermined**: 50+ guarded Tabs never
+  leave the table outline — consistent with either Full-Keyboard-Access
+  off (system default unreadable without changing user settings) or a
+  focus trap; no app-side focus blockers exist in source (the two
+  `allowsHitTesting(false)` hits are the hidden sizing probes, correctly
+  excluded), and every contracted control exposes proper AX roles +
+  labels. VoiceOver live announcement untested (would hijack the shared
+  machine's audio/keyboard; needs a dedicated session).
+- **About-disclosure anomaly (open):** 12 verified synthetic clicks
+  (chevron, label center, double-click) never expand the compact About
+  disclosure while all other controls respond; the label has a normal
+  87×15pt frame (instrumented) and stays AX-absent despite explicit
+  label/combine/button-traits attempts. One human click settles
+  tap-bug vs synthetic-quirk; AX exposure needs structural a11y work.
+  S7 stays conditional-pass on this sub-item only.
+- **Ctrl-Cmd-S with inspector sheet open** showed no observable change
+  (1 trial); restores fine without the sheet. Open, needs a retest.
+- Screenshots cannot prove title contracts at 0.5pt: first-glyph ink
+  bearings differ ~9px between T/A/P at large-title size — numbers must
+  come from instrumented frames, screenshots are state evidence.

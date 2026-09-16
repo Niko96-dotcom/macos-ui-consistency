@@ -11,6 +11,23 @@ Two targets share one package:
 - `SettingsFixture` — settings family (single form, Grid label/control
   columns, no sidebar/inspector/envelope). See [Settings fixture](#settings-fixture-second-family-probe).
 
+Plus four transfer-case fixtures (one family each, same conventions:
+`--dump-geometry`, seeded/aligned modes where applicable):
+
+- `AdversarialFixture` — four form screens (`--page alpha|beta|gamma|delta`)
+  sharing one 150pt label-column contract; alpha/beta/gamma carry the same
+  copied +12pt offset, delta follows the contract. Audit must fail the
+  majority against the contract, never re-baseline to it.
+- `UtilityFixture` — declared fixed-size 320×200 timer utility (no resize,
+  no sidebar, no overflow). Start prints `utility-action-fired` to stdout.
+- `EditorFixture` — document editor with essential inspector (formatting)
+  and optional nav (`--nav-hidden`); `--content-width` entry. Seeded: fixed
+  300pt format bar clips the 200pt narrow inspector; `--aligned` wraps it.
+- `WorkspaceFixture` — dense timeline with constrained 150pt nav, declared
+  inner-scroll timeline viewport, 460pt transport bar; `--content-width`
+  entry. Seeded: transport clips off-window at narrow widths; `--aligned`
+  scrolls it in the declared viewport.
+
 ## Sources (relative paths)
 
 - `fixture/Package.swift` — SwiftPM manifest (tools 5.9, macOS 13, executable `ConsistencyFixture`).
@@ -274,6 +291,19 @@ swift run --package-path fixture SettingsFixture --long-locale
 swift run --package-path fixture SettingsFixture --print-contract
 swift run --package-path fixture SettingsFixture --layout-diagnostics
 swift run --package-path fixture SettingsFixture --dump-geometry
+```
+
+Transfer fixtures:
+
+```sh
+swift run --package-path fixture AdversarialFixture --page alpha
+swift run --package-path fixture AdversarialFixture --page delta --dump-geometry
+swift run --package-path fixture UtilityFixture
+swift run --package-path fixture UtilityFixture --dump-geometry
+swift run --package-path fixture EditorFixture --content-width 700
+swift run --package-path fixture EditorFixture --content-width 700 --aligned --dump-geometry
+swift run --package-path fixture WorkspaceFixture --content-width 560
+swift run --package-path fixture WorkspaceFixture --content-width 560 --aligned --dump-geometry
 ```
 
 Window: titled `Settings Fixture`, initial content 480×360, minimum

@@ -610,6 +610,8 @@ struct DetailPane: View {
                                 Text("About this view")
                                     .font(.callout)
                                     .foregroundColor(.secondary)
+                                    .background(GeometryDumpReader(id: "disclosure-label-\(page.rawValue)"))
+                                    .accessibilityLabel("About this view")
                             }
                             .accessibilityIdentifier("disclosure-about-\(page.rawValue)")
                         }

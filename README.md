@@ -160,8 +160,9 @@ dismisses with Return.
 - GitHub CI runs `unittest` on Ubuntu Python 3.10 / 3.13 and compiles
   the fixture on macOS 14. The live badge above links to hosted results.
 - First scored eval runs live on macOS (S1–S6 and S8 pass, S7 conditional
-  pass with About-expand untested; VoiceOver and true pointer-drag
-  untested). Full per-scenario evidence and open questions:
+  pass with About-expand blocked; transfer cases 1–5 pass incl. a blinded
+  adversarial run; true drags clamp; shortcuts/Escape/Return proven,
+  Tab-order and VoiceOver-announcement open). Full evidence:
   [validation](docs/VALIDATION.md).
 
 ## Capabilities and roadmap
