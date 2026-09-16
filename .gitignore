@@ -1,0 +1,10 @@
+.DS_Store
+.opencode/
+.build/
+.swiftpm/
+__pycache__/
+*.pyc
+.audit/
+DerivedData/
+RESEARCH-AND-PLAN.md
+research-sources.json
