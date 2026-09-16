@@ -144,8 +144,8 @@ dismisses with Return.
   modes visually inspected, sheet Return dismissal checked. Compact navigation,
   inspector controls, and scrolling checked; long description truncation at
   minimum width remains a documented fixture limitation.
-- GitHub CI is configured (`unittest` on Ubuntu Python 3.10 / 3.13, fixture
-  compile on macOS 14) but this CI has not run yet here.
+- GitHub CI runs `unittest` on Ubuntu Python 3.10 / 3.13 and compiles
+  the fixture on macOS 14. The live badge above links to hosted results.
 
 ## Capabilities and roadmap
 
