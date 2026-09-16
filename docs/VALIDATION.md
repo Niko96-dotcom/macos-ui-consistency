@@ -42,3 +42,14 @@ shortest/longest descriptions at narrow width with inspector closed/open, and
 resizing back to wide. Controls/divider stayed aligned. Albums description
 truncation at minimum width remains a known limitation. This is focused visual
 verification, not a completed or scored full evaluation suite.
+
+## Compact composition correction
+
+Replaced the cramped fallback with aligned label/control columns, a native Sort
+menu picker, More actions, and an expandable About description. Manual checks
+covered narrow/wide switching in both directions, Shuffle/Sort retention across
+resize/navigation, inspector access, full Playlists description disclosure, and
+Info sheet open/Return dismissal. The final sizing probe uses disabled hidden
+controls with constant bindings, no actions affecting state, and no identifiers;
+AX snapshots show one visible Shuffle/Sort control in each variant. Full VoiceOver
+and keyboard-navigation certification is not claimed. Swift build passes.

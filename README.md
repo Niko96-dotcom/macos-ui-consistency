@@ -134,6 +134,10 @@ python3 -m unittest discover -s tests -v
 | --- | --- |
 | ![Seeded reference capture](docs/images/fixture-seeded.png) | ![Aligned reference capture](docs/images/fixture-aligned.png) |
 
+Compact composition (native menu picker, secondary actions under More):
+
+![Compact fixture layout](docs/images/fixture-compact.png)
+
 Reference captures from the fixture on the verified host below. The sheet
 dismisses with Return.
 

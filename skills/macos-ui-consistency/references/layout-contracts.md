@@ -100,6 +100,41 @@ applies only within the declared same family/environment, never globally
 across every page. Preserve intentional Table-vs-List internal differences
 and system chrome.
 
+## Compact composition (intentional, not accidental stacking)
+
+A narrow-window fallback is a declared variant, not an excuse for a cramped
+mixed stack. Missed failure pattern: huge blank reserved above controls on
+the shortest header (envelope applied where it should not be) plus Shuffle
+label left / Sort label indented by a segmented picker / Inspector-Info
+buttons crammed below. Flag that combination as FAIL against the compact
+contract even when each control alone looks native.
+
+Deliberate compact contract (app-decision, per same width/variant):
+
+- Hierarchy: controls sit directly below the subtitle (controls top stable,
+  no huge reserved blank); long explanatory description moves to a shared
+  below-controls area (e.g. `About this view` disclosure) or Info sheet.
+  Full text stays discoverable with wrapping; never truncate or
+  blanket-hide important content.
+- Aligned labels: compact semantic group with aligned label/control columns
+  (e.g. `Grid`, no arbitrary offsets to align native labels) or a clean
+  native compact menu picker for the secondary selector (menu avoids the
+  segmented-label indent).
+- Action overflow: keep a coherent wide row in regular; in compact, secondary
+  Info/Inspector may move into an accessible labeled `More` menu. Every
+  action and current selection stays reachable with preserved accessibility
+  labels, identifiers, and focus at readable native sizes (never scale/shrink
+  controls, never globally force equal heights, never reset filter state on
+  navigation/resize, never reposition native chrome).
+- Adaptation is fit-driven (`ViewThatFits` or equivalent), not device/width
+  assumptions; shared pieces are reused, not duplicated giant layouts.
+
+Assess hierarchy, aligned labels, overflow reachability, and content
+discoverability together. Test thresholds in both directions (wide→narrow
+and narrow→wide), with inspector open/closed (180pt), at default 1000×650
+and minimum 700×450, and with shortest vs longest headers, so stale heights
+and one-way-only fallbacks cannot pass.
+
 ## Optical alignment last
 
 Fix structural insets and baselines first. Equal frames can still

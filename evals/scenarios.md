@@ -123,6 +123,39 @@ navigation order, and post-resize re-measure.
   shortened copy, per-page offset, or cached max.
 - Validation is screenshot/manual evidence only; no automated tests claimed.
 
+## 7. Deliberate compact composition (no accidental stacking)
+
+**Prompt:** "Verify the compact variant is deliberate composition, not
+accidental stacking. At 700×450 with and without the 180pt inspector, check
+Tracks (shortest) vs Albums/Playlists (longest): controls sit directly below
+the subtitle with no huge reserved blank; Shuffle/Sort form an aligned
+label/control group (Grid, no arbitrary offsets) with a native menu Sort
+picker at readable size; secondary Inspector/Info live in a labeled More
+menu; the full description lives in the shared below-controls About disclosure
+(wrapped, expandable, not truncated or blanket-hidden). Check both resize
+directions, both navigation orders, and that shuffle/sort survive
+navigation/resize. Do not move native chrome, force equal heights, shrink
+controls, or touch the seeded +8 Playlists title."
+
+**Setup:** `--compact` (700×450) plus manual resize to 1000×650 and back;
+inspector closed and open; per-page screenshots (or pane-local manual
+measures) at each width/inspector state; record navigation order and
+post-resize re-measure; keep seeded Playlists +8 intact.
+
+**Evaluation criteria:**
+
+- Pass: regular shows envelope + wide row with stable controls/divider/body
+  per width; compact shows Grid-aligned labels, menu Sort with visible
+  selection, More menu with both actions reachable (same identifiers/focus),
+  Disclosure collapsed stable with full wrapped text on expand, controls top
+  stable with no huge blank, state preserved, no offsets/scaling/global
+  heights/chrome moves; evidence paths per surface/state recorded.
+- Fail: huge blank above compact controls, misaligned/indented Sort label,
+  crammed buttons below, truncated or missing description, unreachable action
+  or selection, reset state, or any hardcoded height/offset/scale/chrome move.
+- Validation is screenshot/manual evidence only; no automated tests claimed
+  and no pass without re-captured evidence.
+
 ## Held-out strategy
 
 - Keep one page's expected value and one tolerance out of the prompt (e.g.,

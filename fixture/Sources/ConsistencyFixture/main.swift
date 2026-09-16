@@ -185,6 +185,28 @@ struct DescriptionEnvelope: View {
     }
 }
 
+// MARK: - Branch measurement (control-row fit only, prose excluded)
+
+// Available content width (inside shared leading/trailing padding).
+private struct AvailableContentWidthKey: PreferenceKey {
+    static var defaultValue: CGFloat? { nil }
+    static func reduce(value: inout CGFloat?, nextValue: () -> CGFloat?) {
+        if let next = nextValue() {
+            value = next
+        }
+    }
+}
+
+// Intrinsic requirement of the regular control row only (same pieces/spacing).
+private struct RegularControlsWidthKey: PreferenceKey {
+    static var defaultValue: CGFloat? { nil }
+    static func reduce(value: inout CGFloat?, nextValue: () -> CGFloat?) {
+        if let next = nextValue() {
+            value = next
+        }
+    }
+}
+
 // MARK: - Sidebar
 
 struct SidebarView: View {
@@ -232,8 +254,23 @@ struct DetailPane: View {
     let page: Page
     @Binding var showInspector: Bool
     @Binding var showInfo: Bool
-    @State private var shuffle = false
-    @State private var sortOrder = 0
+    // Shuffle/sort live in ContentView (passed as bindings) so page navigation,
+    // resize, and branch switches never reset them.
+    @Binding var shuffle: Bool
+    @Binding var sortOrder: Int
+    @State private var measuredAvailableWidth: CGFloat?
+    @State private var measuredControlsWidth: CGFloat?
+
+    /// Branch choice from control-row fit only; prose never participates.
+    /// Unknown (first layout) defaults to the wide variant; narrow widths
+    /// correct live once both measures resolve. No magic breakpoint.
+    private var useRegularBranch: Bool {
+        guard let available = measuredAvailableWidth,
+              let required = measuredControlsWidth else {
+            return true
+        }
+        return available >= required
+    }
 
     /// App-owned content title leading. Tracks/Albums use the shared 24pt inset.
     /// Playlists adds the seeded +8pt extra (32pt total) unless `--aligned`.
@@ -244,6 +281,57 @@ struct DetailPane: View {
         case .tracks, .albums:
             return ContentLayout.sharedLeading
         }
+    }
+
+    // MARK: - Shared control pieces (single source, reused in both variants)
+
+    private var shuffleRegular: some View {
+        Toggle("Shuffle", isOn: $shuffle)
+            .toggleStyle(.switch)
+            .accessibilityIdentifier("control-shuffle-\(page.rawValue)")
+    }
+
+    private var shuffleCompactControl: some View {
+        Toggle("Shuffle", isOn: $shuffle)
+            .toggleStyle(.switch)
+            .labelsHidden()
+            .accessibilityLabel("Shuffle")
+            .accessibilityIdentifier("control-shuffle-\(page.rawValue)")
+    }
+
+    private var sortSegmented: some View {
+        Picker("Sort", selection: $sortOrder) {
+            Text("Title").tag(0)
+            Text("Artist").tag(1)
+        }
+        .pickerStyle(.segmented)
+        .frame(width: 180)
+        .accessibilityIdentifier("control-sort-\(page.rawValue)")
+    }
+
+    private var sortMenuCompact: some View {
+        Picker("Sort", selection: $sortOrder) {
+            Text("Title").tag(0)
+            Text("Artist").tag(1)
+        }
+        .pickerStyle(.menu)
+        .labelsHidden()
+        .accessibilityLabel("Sort")
+        .accessibilityIdentifier("control-sort-\(page.rawValue)")
+    }
+
+    private var inspectorButton: some View {
+        Button(showInspector ? "Hide Inspector" : "Show Inspector") {
+            showInspector.toggle()
+        }
+        .accessibilityIdentifier("button-toggle-inspector")
+    }
+
+    private var infoButton: some View {
+        Button("Info") {
+            showInfo = true
+        }
+        .accessibilityIdentifier("button-show-info")
     }
 
     var body: some View {
@@ -269,56 +357,132 @@ struct DetailPane: View {
                     .padding(.trailing, ContentLayout.sharedLeading)
                     .accessibilityIdentifier("page-subtitle-\(page.rawValue)")
 
-                DescriptionEnvelope(page: page)
-                    .padding(.leading, ContentLayout.sharedLeading)
-                    .padding(.trailing, ContentLayout.sharedLeading)
-
-                ViewThatFits(in: .horizontal) {
-                    HStack(spacing: 12) {
-                        Toggle("Shuffle", isOn: $shuffle)
-                            .toggleStyle(.switch)
-                            .accessibilityIdentifier("control-shuffle-\(page.rawValue)")
-                        Picker("Sort", selection: $sortOrder) {
-                            Text("Title").tag(0)
-                            Text("Artist").tag(1)
+                // Title/description policy (explicit, variant-scoped):
+                // Regular variant: description envelope above controls keeps
+                // controls/divider/body stable across siblings at same width.
+                // Compact variant (fit-driven fallback below): controls sit
+                // directly below subtitle so controls top stays stable with no
+                // huge reserved blank; long description moves to the shared
+                // below-controls DisclosureGroup ("About this view"). Collapsed
+                // height is stable across siblings; expanded shows full text
+                // with wrapping (no truncation, no blanket-hide). No hardcoded
+                // heights, no per-page offsets, no global height forcing.
+                // Branch choice is control-row fit only: measured available
+                // content width vs measured regular-row intrinsic requirement.
+                // Description prose never participates in the switch (it
+                // previously inflated ViewThatFits ideal width and pinned
+                // 1000x650 to compact). No magic screen breakpoint; inspector
+                // show/hide and resize re-resolve live with no stale branch.
+                Group {
+                    if useRegularBranch {
+                        // Regular: coherent wide row with native readable sizes.
+                        VStack(alignment: .leading, spacing: 12) {
+                            DescriptionEnvelope(page: page)
+                            HStack(spacing: 12) {
+                                shuffleRegular
+                                sortSegmented
+                                Spacer()
+                                inspectorButton
+                                infoButton
+                            }
                         }
-                        .pickerStyle(.segmented)
-                        .frame(width: 180)
-                        .accessibilityIdentifier("control-sort-\(page.rawValue)")
-                        Spacer()
-                        Button(showInspector ? "Hide Inspector" : "Show Inspector") {
-                            showInspector.toggle()
+                    } else {
+                        // Compact (intentional composition, not accidental stack):
+                        // aligned label/control columns via Grid (no arbitrary
+                        // offsets), native menu picker for Sort (no indent, no
+                        // shrink), secondary actions in labeled More menu.
+                        // Every action and selection stays reachable with the same
+                        // identifiers and focus.
+                        VStack(alignment: .leading, spacing: 12) {
+                            Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 8) {
+                                GridRow {
+                                    Text("Shuffle")
+                                        .font(.body)
+                                        .gridColumnAlignment(.trailing)
+                                        .accessibilityHidden(true)
+                                    shuffleCompactControl
+                                }
+                                GridRow {
+                                    Text("Sort")
+                                        .font(.body)
+                                        .gridColumnAlignment(.trailing)
+                                        .accessibilityHidden(true)
+                                    sortMenuCompact
+                                }
+                            }
+                            Menu("More") {
+                                inspectorButton
+                                infoButton
+                            }
+                            .accessibilityIdentifier("menu-more-\(page.rawValue)")
+                            .accessibilityLabel("More actions")
+                            DisclosureGroup {
+                                Text(pageDescriptions[page] ?? "")
+                                    .font(.body)
+                                    .foregroundColor(.secondary)
+                                    .lineLimit(nil)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .accessibilityIdentifier("page-description-\(page.rawValue)")
+                            } label: {
+                                Text("About this view")
+                                    .font(.callout)
+                                    .foregroundColor(.secondary)
+                            }
+                            .accessibilityIdentifier("disclosure-about-\(page.rawValue)")
                         }
-                        .accessibilityIdentifier("button-toggle-inspector")
-                        Button("Info") {
-                            showInfo = true
-                        }
-                        .accessibilityIdentifier("button-show-info")
                     }
-                    // Narrow fallback: stack Toggle and Picker on separate
-                    // lines so neither squeezes the other out (Shuffle label
-                    // must stay visible); buttons wrap to their own row.
-                    VStack(alignment: .leading, spacing: 8) {
-                        Toggle("Shuffle", isOn: $shuffle)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(
+                    GeometryReader { proxy in
+                        Color.clear.preference(
+                            key: AvailableContentWidthKey.self,
+                            value: proxy.size.width
+                        )
+                    }
+                )
+                .overlay(alignment: .topLeading) {
+                    // Inert sizing probe: native counterparts with constant
+                    // bindings and no-op actions (no shared helpers, no live
+                    // bindings, no identifiers, no state mutation). Same
+                    // labels/styles/spacing/widths, including the current
+                    // Show/Hide Inspector label, so intrinsic width matches.
+                    HStack(spacing: 12) {
+                        Toggle("Shuffle", isOn: .constant(false))
                             .toggleStyle(.switch)
-                            .accessibilityIdentifier("control-shuffle-\(page.rawValue)")
-                        Picker("Sort", selection: $sortOrder) {
+                        Picker("Sort", selection: .constant(0)) {
                             Text("Title").tag(0)
                             Text("Artist").tag(1)
                         }
                         .pickerStyle(.segmented)
                         .frame(width: 180)
-                        .accessibilityIdentifier("control-sort-\(page.rawValue)")
-                        HStack(spacing: 12) {
-                            Button(showInspector ? "Hide Inspector" : "Show Inspector") {
-                                showInspector.toggle()
-                            }
-                            .accessibilityIdentifier("button-toggle-inspector")
-                            Button("Info") {
-                                showInfo = true
-                            }
-                            .accessibilityIdentifier("button-show-info")
+                        Spacer()
+                        Button(showInspector ? "Hide Inspector" : "Show Inspector") {}
+                        Button("Info") {}
+                    }
+                    .fixedSize(horizontal: true, vertical: false)
+                    .hidden()
+                    .disabled(true)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+                    .background(
+                        GeometryReader { probe in
+                            Color.clear.preference(
+                                key: RegularControlsWidthKey.self,
+                                value: probe.size.width
+                            )
                         }
+                    )
+                }
+                .onPreferenceChange(AvailableContentWidthKey.self) { next in
+                    if measuredAvailableWidth != next {
+                        measuredAvailableWidth = next
+                    }
+                }
+                .onPreferenceChange(RegularControlsWidthKey.self) { next in
+                    if measuredControlsWidth != next {
+                        measuredControlsWidth = next
                     }
                 }
                 .padding(.leading, ContentLayout.sharedLeading)
@@ -477,6 +641,10 @@ struct ContentView: View {
     @State private var selectedPage: Page
     @State private var showInspector = false
     @State private var showInfo = false
+    // Shared filter state: owned here so page changes, resizes, and
+    // compact/regular branch switches never reset shuffle/sort.
+    @State private var shuffle = false
+    @State private var sortOrder = 0
 
     init(initialPage: Page) {
         _selectedPage = State(initialValue: initialPage)
@@ -490,7 +658,7 @@ struct ContentView: View {
             SidebarView(selectedPage: $selectedPage)
                 .frame(minWidth: 150, idealWidth: 170, maxWidth: 180, minHeight: 0, maxHeight: .infinity)
             Divider()
-            DetailPane(page: selectedPage, showInspector: $showInspector, showInfo: $showInfo)
+            DetailPane(page: selectedPage, showInspector: $showInspector, showInfo: $showInfo, shuffle: $shuffle, sortOrder: $sortOrder)
                 .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
             if showInspector {
                 Divider()

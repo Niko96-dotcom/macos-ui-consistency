@@ -59,8 +59,14 @@ the window to fit.
 - Each Table/List keeps an explicitly bounded 220pt-tall viewport and
   scrolls internally; the fixed height never forces the outer row beyond
   host bounds (previous `minHeight(220)` did).
-- Narrow-width control fallback stacks Toggle and Picker on separate lines
-  (buttons on their own row) so the Shuffle label stays visible.
+- Deliberate compact fallback (fit-driven by measured control-row width, no device checks):
+  wide row first, compact group second. Compact uses a `Grid` with aligned
+  label/control columns (no arbitrary offsets), native readable sizes (no
+  scaling/shrinking), `Picker(.menu)` for Sort (no segmented indent), and a
+  labeled `More` menu (`menu-more-*`) holding Show Inspector / Info with the
+  same identifiers. Shared Toggle/Picker/Button pieces are reused in both
+  branches (no duplicated giant layouts). Shuffle/sort state lives in
+  `ContentView` so page changes, resizes, and branch switches never reset it.
 - Sidebar is constrained to 150–180pt (ideal 170) so the inspector
   (180pt, vertically scrollable) does not squeeze the detail pane
   unusably narrow. Outer `HStack` is bounded to host bounds.
@@ -74,6 +80,14 @@ the window to fit.
   copy (one line) reserves the same space as longer Albums/Playlists copy
   (two lines) at that width. Controls baseline, divider, and body start stay
   stable across Tracks/Albums/Playlists at the same width.
+- Envelope applies to the regular variant only (wide row). The compact
+  variant intentionally does not reserve envelope space above controls:
+  controls sit directly below the subtitle (controls top stable, no huge
+  blank), and the full description moves to the shared below-controls
+  `DisclosureGroup("About this view")` (`disclosure-about-*`, content keeps
+  `page-description-*`, wrapped, not truncated). Collapsed height is stable
+  across siblings; expanded height is user-initiated and documented. Full
+  text remains discoverable without blanket-hiding.
 - No hardcoded header height/line count, no truncation, no shortened copy, no
   per-page offsets, no historical max cache. Narrow widths and inspector-open
   re-resolve live; no stale height on resize.
@@ -108,17 +122,29 @@ the window to fit.
 
 - Long / wrapping descriptions and different content text lengths per page
   (see the compact-width limitation above).
+- Deliberate compact composition (control-fit fallback): `Grid`-aligned
+  Shuffle/Sort columns, native menu Sort picker, `More` menu for secondary
+  actions, and below-controls `About this view` disclosure holding the full
+  description. Cramped mixed stacks (misaligned labels, indented segmented
+  label, buttons crammed below a blank) are not this variant; the declared
+  variant above is the pass target at 700×450 with or without the 180pt
+  inspector.
 - Compact inspector (`inspector-pane`): tighter spacing, smaller type, different
   family — excluded from any content-title contract. It scrolls vertically
   if needed at short heights.
-- Clean native controls (Toggle, segmented Picker, Slider, Table/List) and
-  modest SF Symbols. No decorative cards/pills. Narrow widths reflow
-  controls vertically; that reflow is expected, not a defect.
+- Clean native controls (Toggle, segmented Picker in regular / menu Picker in
+  compact, Slider, Table/List) and modest SF Symbols. No decorative
+  cards/pills. No scaling/shrinking of controls, no arbitrary offsets to align
+  native labels, no globally forced equal heights, no native chrome moves.
+  Narrow widths use the declared compact composition above; that deliberate
+  reflow is expected, not a defect.
 
 ## Accessibility identifiers (stable, no runtime exporter)
 
-Page titles (`page-title-*`), subtitles, descriptions, bodies (`page-body-*`),
+Page titles (`page-title-*`), subtitles, descriptions (`page-description-*` in
+regular envelope or compact disclosure), bodies (`page-body-*`),
 page buttons (`page-button-*`), `button-toggle-inspector`, `button-show-info`,
+compact `menu-more-*` and `disclosure-about-*`,
 `button-close-info`, `info-sheet`, `inspector-pane`. There is no runtime
 measure exporter and no fabricated geometric evidence in this fixture.
 
