@@ -117,3 +117,69 @@ evidence `docs/images/settings-seeded.png`, `settings-aligned.png`,
 Not yet run: narrow-width resize matrix, keyboard/VoiceOver spot-check,
 and the full transfer-case protocol (`evals/transfer-cases.md` remains
 not-run); instrumented measurement that could prove the 0.5pt passes.
+
+## Eval scoring — first scored runs (2026-09-16, this host)
+
+All runs driven live against the fixtures on this Mac (Dark appearance,
+2x Retina) via scripted UI drive (Quartz sidebar clicks with AX
+verification, AX button clicks, keystrokes, osascript resizes) plus
+screenshots and the instrumented `--dump-geometry` probe. Evidence:
+`docs/images/eval-*`; run inputs/outputs: `.audit/eval-*` (gitignored
+working material; verdicts below are the record). Headless-unfriendly
+states got deterministic launch flags (`--inspector-open`,
+`--content-width/height`); these reach the same states as taps/resizes.
+
+- **S1 audit-only: PASS.** True in-app nav Tracks→Albums→Playlists,
+  per-page screenshots, instrumented titles 24.0/24.0/32.0 → compare
+  exit 1 (pass, pass, fail). Zero app files modified. Method note:
+  screenshot ink-edge measurement is confounded by glyph bearings
+  (T/A/P first-glyph ink differs ~9px at large-title size), so numbers
+  use instrumented frames and screenshots are state evidence.
+- **S2 explicit fix: PASS.** One-line fix in a `/tmp` fixture copy
+  (playlists `titleLeading` → shared), diff-proven single change;
+  before 32.00 → after 24.00 with before/after screenshots; compare
+  exit 0, 3 pass. No `--aligned` output used as proof.
+- **S3 source-only: PASS.** Assessment restricted to source facts
+  (shared 24 at main.swift:80, +8 suspect at :122/:449), verdict
+  UNVERIFIED throughout, no pixels or coverage claimed. Blinding caveat:
+  assessor had prior runtime knowledge; artifact content is source-only.
+- **S4 blocked sheet: PASS.** Info sheet opened on Tracks via real AX
+  click, captured, Escape-dismissed; Albums sheet recorded blocked +
+  reason (simulated gate) → compare yields unverified, never pass, no
+  substituted evidence.
+- **S5 intended variants: PASS.** Fixed copy keeps two-line Albums copy
+  and compact inspector with own spacing (both captured); only (a)
+  fixed; chrome untouched.
+- **S6 header envelope: PASS.** Controls row y362-409 and divider
+  y434-435 pixel-identical across T/A/P at 1000 closed, both nav orders
+  (forward + reverse, order-independent), 1000 inspector-open (uniform
+  +32px envelope re-resolve on all pages), 700 closed (compact band,
+  pixel-identical incl. disclosure/divider), and live resize
+  1000→700→1000 (branch flips both ways, anchors return, no stale
+  height). No hardcoded heights, no truncation, copy intact. Body-top
+  note: table-header-top vs list-first-row-top differ structurally with
+  no declared cross-type contract, so observed + excluded per the
+  skill's own uncontracted-relation rule; candidate for a future
+  body-start contract.
+- **S7 compact composition: conditional PASS.** Compact alignment
+  79.50 on Shuffle/Sort/More across all 3 pages instrumented (9/9 CLI
+  pass); native menu Sort shows value; More opened live (Hide
+  Inspector + Info reachable); no huge blank; About disclosure present
+  and collapsed-stable; shuffle ON survives nav + 860→1000→860
+  resizes; no offsets/scaling/chrome moves (fixture code untouched by
+  eval). Blocked sub-item: About-expand full-text capture (3 click
+  attempts failed on a shared live desktop), so that criterion is
+  untested, never passed.
+- **S8 sizing envelope: PASS.** Programmatic resize to 200×200 clamps to
+  560×502 on all 4 pane combos (exercises the same `windowWillResize`
+  delegate path as drag; true pointer-drag untested). Narrowest state
+  keeps nav (picker + Show Sidebar), no clipped primary control;
+  inspector sheet works at minimum with retained state; Ctrl-Cmd-S
+  restores sidebar + widens 560→700. Open question: Ctrl-Cmd-S with the
+  inspector sheet open showed no observable change (1 trial).
+  VoiceOver spot-check untested (no VO harness in this session).
+
+Remaining gaps (not hidden): About-expand capture, true pointer-drag,
+VoiceOver, transfer-case protocol runs, held-out rotation scoring.
+Privacy: all evidence frames are fixture-window pixels only; captures
+containing desktop content were deleted, never committed.

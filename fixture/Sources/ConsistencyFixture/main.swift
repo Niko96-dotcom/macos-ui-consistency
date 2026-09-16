@@ -1,6 +1,7 @@
 import SwiftUI
 import AppKit
 import Combine
+import Darwin
 
 // MARK: - Page model
 
@@ -53,6 +54,41 @@ enum LaunchConfig {
     /// `--layout-diagnostics` prints window content/frame/min sizing (no private data).
     static var isLayoutDiagnostics: Bool {
         CommandLine.arguments.contains("--layout-diagnostics")
+    }
+
+    /// `--dump-geometry` prints instrumented layout frames of tagged views
+    /// in detail-pane points, then exits before any interaction. Layout
+    /// values only (no pixels, no screenshots); background readers never
+    /// affect layout. Unscrolled initial state after a 1.0s settle.
+    static var isDumpGeometry: Bool {
+        CommandLine.arguments.contains("--dump-geometry")
+    }
+
+    /// `--inspector-open` starts with the inspector shown. Test-only entry
+    /// point to a real reachable state (same as tapping Show Inspector);
+    /// no behavior change beyond initial state.
+    static var isInspectorOpen: Bool {
+        CommandLine.arguments.contains("--inspector-open")
+    }
+
+    /// `--content-width=N` / `--content-height=N` start at a custom content
+    /// size (clamped to the policy minimum). Test-only entry points to real
+    /// widths (e.g. the compact band); no behavior change beyond size.
+    static var customContentWidth: CGFloat? {
+        guard let s = flagValue("--content-width"), let d = Double(s), d > 0 else { return nil }
+        return CGFloat(d)
+    }
+    static var customContentHeight: CGFloat? {
+        guard let s = flagValue("--content-height"), let d = Double(s), d > 0 else { return nil }
+        return CGFloat(d)
+    }
+    private static func flagValue(_ name: String) -> String? {
+        let args = CommandLine.arguments
+        for (index, arg) in args.enumerated() {
+            if arg == name, index + 1 < args.count { return args[index + 1] }
+            if arg.hasPrefix(name + "=") { return String(arg.dropFirst((name + "=").count)) }
+        }
+        return nil
     }
 
     /// `--page tracks|albums|playlists`, default tracks. Supports `--page X` and `--page=X`.
@@ -343,6 +379,35 @@ struct SidebarView: View {
 
 // MARK: - Detail pane
 
+// MARK: - Instrumented geometry dump (fixture test tooling, not skill support)
+//
+// Background readers report layout frames of tagged views into the
+// detail-pane coordinate space. They never affect layout (same pattern as
+// the existing width-measurement preferences). `--dump-geometry` prints
+// the collected frames and exits; normal runs only carry the plumbing.
+
+/// Layout frame of one tagged view, in detail-pane points.
+struct GeometryDumpKey: PreferenceKey {
+    static var defaultValue: [String: CGRect] { [:] }
+    static func reduce(value: inout [String: CGRect], nextValue: () -> [String: CGRect]) {
+        value.merge(nextValue(), uniquingKeysWith: { $1 })
+    }
+}
+
+/// Layout-neutral frame reader. Place INSIDE any offset padding when the
+/// visual position (not the padded frame) is the measured quantity.
+struct GeometryDumpReader: View {
+    let id: String
+    var body: some View {
+        GeometryReader { geo in
+            Color.clear.preference(
+                key: GeometryDumpKey.self,
+                value: [id: geo.frame(in: .named("detail-pane"))]
+            )
+        }
+    }
+}
+
 struct DetailPane: View {
     let page: Page
     @Binding var showInspector: Bool
@@ -353,6 +418,17 @@ struct DetailPane: View {
     @Binding var sortOrder: Int
     @State private var measuredAvailableWidth: CGFloat?
     @State private var measuredControlsWidth: CGFloat?
+    @State private var dumpedGeometries: [String: CGRect] = [:]
+
+    /// Prints collected layout frames and exits (only under `--dump-geometry`).
+    private func dumpGeometriesAndExit() {
+        for id in dumpedGeometries.keys.sorted() {
+            let r = dumpedGeometries[id]!
+            print(String(format: "geometry %@ x=%.2f y=%.2f w=%.2f h=%.2f", id as NSString, r.origin.x, r.origin.y, r.size.width, r.size.height))
+        }
+        fflush(stdout)
+        exit(0)
+    }
 
     /// Branch choice from control-row fit only; prose never participates.
     /// Unknown (first layout) defaults to the wide variant; narrow widths
@@ -388,6 +464,7 @@ struct DetailPane: View {
         Toggle("Shuffle", isOn: $shuffle)
             .toggleStyle(.switch)
             .labelsHidden()
+            .background(GeometryDumpReader(id: "compact-shuffle-\(page.rawValue)"))
             .accessibilityLabel("Shuffle")
             .accessibilityIdentifier("control-shuffle-\(page.rawValue)")
     }
@@ -409,6 +486,7 @@ struct DetailPane: View {
         }
         .pickerStyle(.menu)
         .labelsHidden()
+        .background(GeometryDumpReader(id: "compact-sort-\(page.rawValue)"))
         .accessibilityLabel("Sort")
         .accessibilityIdentifier("control-sort-\(page.rawValue)")
     }
@@ -440,6 +518,7 @@ struct DetailPane: View {
                 Text(page.title)
                     .font(.largeTitle)
                     .bold()
+                    .background(GeometryDumpReader(id: "page-title-\(page.rawValue)"))
                     .padding(.leading, titleLeading)
                     .padding(.top, ContentLayout.sharedTop)
                     .accessibilityIdentifier("page-title-\(page.rawValue)")
@@ -514,6 +593,7 @@ struct DetailPane: View {
                                         inspectorButton
                                         infoButton
                                     }
+                                    .background(GeometryDumpReader(id: "compact-more-\(page.rawValue)"))
                                     .accessibilityIdentifier("menu-more-\(page.rawValue)")
                                     .accessibilityLabel("More actions")
                                 }
@@ -599,6 +679,15 @@ struct DetailPane: View {
             }
             .frame(maxWidth: .infinity, alignment: .topLeading)
             .padding(.bottom, 16)
+            .coordinateSpace(name: "detail-pane")
+            .onPreferenceChange(GeometryDumpKey.self) { dumpedGeometries = $0 }
+            .onAppear {
+                if LaunchConfig.isDumpGeometry {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                        dumpGeometriesAndExit()
+                    }
+                }
+            }
         }
         .id(page) // Each page begins at the same top-of-content position.
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -742,7 +831,7 @@ struct InfoSheetView: View {
 
 struct ContentView: View {
     @State private var selectedPage: Page
-    @State private var showInspector = false
+    @State private var showInspector = LaunchConfig.isInspectorOpen
     @State private var showInfo = false
     // Shared filter state: owned here so page changes, resizes, and
     // compact/regular branch switches never reset shuffle/sort.
@@ -895,9 +984,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         makeMainMenu()
-        let initialContentSize = LaunchConfig.isCompact
+        var initialContentSize = LaunchConfig.isCompact
             ? WindowPolicy.contentMinSize
             : WindowPolicy.contentDefaultSize
+        if let w = LaunchConfig.customContentWidth {
+            initialContentSize.width = max(w, WindowPolicy.contentMinWidth)
+        }
+        if let h = LaunchConfig.customContentHeight {
+            initialContentSize.height = max(h, WindowPolicy.contentMinHeight)
+        }
         let contentRect = NSRect(origin: .zero, size: initialContentSize)
         window = NSWindow(
             contentRect: contentRect,

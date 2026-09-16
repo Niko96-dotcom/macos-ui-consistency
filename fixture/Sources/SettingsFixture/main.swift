@@ -35,6 +35,13 @@ enum SettingsLaunchConfig {
     static var isPrintContract: Bool {
         CommandLine.arguments.contains("--print-contract")
     }
+
+    /// `--dump-geometry` prints instrumented layout frames of tagged views
+    /// in grid points, then exits before any interaction. Layout values
+    /// only; background readers never affect layout. Settles 1.0s.
+    static var isDumpGeometry: Bool {
+        CommandLine.arguments.contains("--dump-geometry")
+    }
 }
 
 // MARK: - Shared layout policy (single source of truth for the defect)
@@ -109,6 +116,35 @@ let settingsRows: [SettingsRow] = [
     ),
 ]
 
+// MARK: - Instrumented geometry dump (fixture test tooling, not skill support)
+//
+// Background readers report layout frames of tagged views into the
+// settings-grid coordinate space. They never affect layout.
+// `--dump-geometry` prints the collected frames and exits; normal runs
+// only carry the plumbing.
+
+/// Layout frame of one tagged view, in grid points.
+struct SettingsGeometryDumpKey: PreferenceKey {
+    static var defaultValue: [String: CGRect] { [:] }
+    static func reduce(value: inout [String: CGRect], nextValue: () -> [String: CGRect]) {
+        value.merge(nextValue(), uniquingKeysWith: { $1 })
+    }
+}
+
+/// Layout-neutral frame reader. Placed INSIDE the seeded offset padding so
+/// the visual control position (not the padded frame) is measured.
+struct SettingsGeometryDumpReader: View {
+    let id: String
+    var body: some View {
+        GeometryReader { geo in
+            Color.clear.preference(
+                key: SettingsGeometryDumpKey.self,
+                value: [id: geo.frame(in: .named("settings-grid"))]
+            )
+        }
+    }
+}
+
 // MARK: - Settings form (Grid columns, no envelope)
 
 struct SettingsFormView: View {
@@ -116,6 +152,17 @@ struct SettingsFormView: View {
     @State private var defaultView = "Tracks"
     @State private var showNotifications = true
     @State private var cacheSize = 50.0
+    @State private var dumpedGeometries: [String: CGRect] = [:]
+
+    /// Prints collected layout frames and exits (only under `--dump-geometry`).
+    private func dumpGeometriesAndExit() {
+        for id in dumpedGeometries.keys.sorted() {
+            let r = dumpedGeometries[id]!
+            print(String(format: "geometry %@ x=%.2f y=%.2f w=%.2f h=%.2f", id as NSString, r.origin.x, r.origin.y, r.size.width, r.size.height))
+        }
+        fflush(stdout)
+        exit(0)
+    }
 
     var body: some View {
         Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: SettingsLayout.columnGap, verticalSpacing: 12) {
@@ -136,11 +183,21 @@ struct SettingsFormView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(SettingsGeometryDumpReader(id: "settings-help-default-view"))
                     .accessibilityIdentifier("settings-help-default-view")
             }
         }
+        .coordinateSpace(name: "settings-grid")
         .padding(SettingsLayout.contentPadding)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .onPreferenceChange(SettingsGeometryDumpKey.self) { dumpedGeometries = $0 }
+        .onAppear {
+            if SettingsLaunchConfig.isDumpGeometry {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                    dumpGeometriesAndExit()
+                }
+            }
+        }
     }
 
     private var helpText: String {
@@ -160,6 +217,7 @@ struct SettingsFormView: View {
             }
             .pickerStyle(.menu)
             .labelsHidden()
+            .background(SettingsGeometryDumpReader(id: row.accessibilityControl))
         case .defaultView:
             Picker("", selection: $defaultView) {
                 Text("Tracks").tag("Tracks")
@@ -168,11 +226,14 @@ struct SettingsFormView: View {
             }
             .pickerStyle(.menu)
             .labelsHidden()
+            .background(SettingsGeometryDumpReader(id: row.accessibilityControl))
         case .notifications:
             Toggle("", isOn: $showNotifications)
                 .labelsHidden()
+                .background(SettingsGeometryDumpReader(id: row.accessibilityControl))
                 // Seeded defect lives here and only here: per-row offset
-                // against the shared control column.
+                // against the shared control column. The reader sits INSIDE
+                // this padding so the visual position is measured.
                 .padding(.leading, SettingsLayout.notificationsExtraLeading)
         case .cache:
             HStack {
@@ -182,6 +243,7 @@ struct SettingsFormView: View {
                     .font(.body)
                     .foregroundStyle(.secondary)
             }
+            .background(SettingsGeometryDumpReader(id: row.accessibilityControl))
         }
     }
 }

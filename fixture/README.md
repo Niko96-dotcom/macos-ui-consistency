@@ -50,6 +50,37 @@ swift run --package-path fixture ConsistencyFixture --compact
 swift run --package-path fixture ConsistencyFixture --page tracks --compact
 ```
 
+Deterministic state entry points (test-only; same states as the
+equivalent taps/resizes, no behavior change):
+
+```sh
+swift run --package-path fixture ConsistencyFixture --inspector-open
+swift run --package-path fixture ConsistencyFixture --content-width 860 --inspector-open
+swift run --package-path fixture ConsistencyFixture --content-width 700
+```
+
+`--inspector-open` starts with the inspector shown.
+`--content-width=N` / `--content-height=N` start at a custom content size
+(clamped to the policy minimum). Useful widths: 860 with inspector (compact
+band), 700 with sidebar (compact band), 560 (collapsed minimum).
+
+Instrumented geometry (fixture test tooling, not skill support):
+
+```sh
+swift run --package-path fixture ConsistencyFixture --page playlists --dump-geometry
+swift run --package-path fixture ConsistencyFixture --content-width 860 --inspector-open --dump-geometry
+swift run --package-path fixture SettingsFixture --dump-geometry
+```
+
+`--dump-geometry` prints layout frames (`geometry <id> x=.. y=.. w=.. h=..`,
+detail-pane points for the browser fixture, grid points for settings) after
+a 1.0s settle, then exits. Background readers never affect layout; the
+unscrolled initial state is dumped. Tagged: `page-title-*`,
+`compact-shuffle/sort/more-*`, `settings-control-*`,
+`settings-help-default-view`. Precision is exact layout values; use 0.1pt
+reporting uncertainty to cover pixel rounding. This does not replace
+screenshots: it verifies the source-to-layout chain, not rendered pixels.
+
 Layout diagnostics (window sizes only, no private data, for coordinator checks):
 
 ```sh
@@ -242,6 +273,7 @@ swift run --package-path fixture SettingsFixture --aligned
 swift run --package-path fixture SettingsFixture --long-locale
 swift run --package-path fixture SettingsFixture --print-contract
 swift run --package-path fixture SettingsFixture --layout-diagnostics
+swift run --package-path fixture SettingsFixture --dump-geometry
 ```
 
 Window: titled `Settings Fixture`, initial content 480×360, minimum
