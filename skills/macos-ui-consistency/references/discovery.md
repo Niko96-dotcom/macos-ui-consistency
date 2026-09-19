@@ -19,6 +19,15 @@ system alerts) are navigation coverage only: noted as reachable, assigned
 
 Only app-owned layout surfaces count toward the layout denominator.
 
+## Build identity before traversal
+
+Resolve the requested working tree and recent user changes before editing.
+Record revision plus dirty state/build identity, executable path and process
+being driven. If several builds share a name, target the intended process.
+After rebuild/relaunch, confirm the evidence belongs to that artifact. Check
+session availability and whether a window is reachable before treating absent
+windows as a layout regression. Never change lock/security settings to test UI.
+
 ## Two-pass discovery
 
 **Pass A — static candidates.** Targeted search plus manual triage for

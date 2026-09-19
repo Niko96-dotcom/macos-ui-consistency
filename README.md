@@ -4,13 +4,13 @@
 
 Guidance-driven skill plus a small deterministic CLI that audits macOS
 SwiftUI / AppKit cross-screen consistency, reports with evidence, and
-repairs only clear accidental app-owned drift. v0.1 tooling plus a native
+repairs only clear accidental app-owned drift. Deterministic tooling plus a native
 SwiftPM fixture. No benchmarks claimed.
 
 ## Scope
 
-In scope: shared shells and page families, pane-local keylines, semantic
-type roles, control sizing by context, grouping by proximity, declared
+In scope: whole-window relationships, shared shells and page families,
+pane-local keylines, control appearance, state transitions, optical hierarchy, declared
 numeric contracts compared against supplied measurements, eligible repairs
 of accidental app-owned drift with before/after verification.
 
@@ -32,7 +32,7 @@ the app choice, not a platform value):
 ## Layout
 
 - [Skill](skills/macos-ui-consistency/SKILL.md) — entrypoint, progressive disclosure.
-- [Discovery](skills/macos-ui-consistency/references/discovery.md), [layout contracts](skills/macos-ui-consistency/references/layout-contracts.md), [verification](skills/macos-ui-consistency/references/verification.md), [window adaptation](skills/macos-ui-consistency/references/window-adaptation.md), [data format](skills/macos-ui-consistency/references/data-format.md) (normative CLI JSON schema).
+- [Discovery](skills/macos-ui-consistency/references/discovery.md), [layout contracts](skills/macos-ui-consistency/references/layout-contracts.md), [verification](skills/macos-ui-consistency/references/verification.md), [window adaptation](skills/macos-ui-consistency/references/window-adaptation.md), [whole-window review](skills/macos-ui-consistency/references/whole-window-review.md), [data format](skills/macos-ui-consistency/references/data-format.md) (normative CLI JSON schema).
 - [CLI](skills/macos-ui-consistency/scripts/ui_consistency.py) — stdlib-only `scan`, `compare`, `report`.
 - [Contracts](examples/contracts.json), [measurements](examples/measurements.json), [expected comparison](examples/expected-comparison.json) — synthetic repo-root samples.
 - [Tests](tests/test_ui_consistency.py) — `unittest` suite.
@@ -66,6 +66,15 @@ fi
 For Claude Code, use `$HOME/.claude/skills/macos-ui-consistency` as the destination. Use the appropriate skill folder for other hosts. Or point the host at the
 checked-out `skills/macos-ui-consistency/SKILL.md` with no install.
 
+For an authorized update of an existing copy, compare it with the checkout
+first and back it up outside the skill directory. Update the entrypoint,
+references, scripts, and agent metadata together; copying only `SKILL.md`
+can leave the host running an older schema. Preserve deliberate host-only
+frontmatter such as Claude's `argument-hint`. Verify file hashes against the
+source afterward (compare the entrypoint body separately if frontmatter
+has an adapter field), and run a sample comparison through the installed
+script. Do not remove unknown host-local files or copy `__pycache__`.
+
 ## Usage
 
 Load `skills/macos-ui-consistency/SKILL.md` in the host. Default invocation
@@ -82,7 +91,10 @@ $macos-ui-consistency audit-only review of native Mac UI across all known pages.
 
 ### CLI quickstart (repo root)
 
-Schemas frozen at `schema_version: 1`. Details in the
+Family-only contracts remain version 1 compatible. Contracts version 2 adds
+explicit `window` and `component` scopes selecting named surfaces across
+families; absent targets are unverified. Measurements and outputs stay version 1.
+Older CLIs reject version 2 contracts instead of ignoring the new scope. Details in the
 [data format](skills/macos-ui-consistency/references/data-format.md).
 Existing outputs are refused unless `--force`; symlinked outputs are refused.
 
@@ -152,7 +164,8 @@ dismisses with Return.
 
 ## Verification (current host only)
 
-- 47 Python tests pass on macOS with Python 3.14.
+- 53 Python tests pass locally, including explicit shared scopes, missing
+  targets, ownership/evidence gates, and byte-identical legacy output.
 - Native fixture built with Swift 6.3.3 on macOS 26; seeded and aligned
   modes visually inspected, sheet Return dismissal checked. Compact navigation,
   inspector controls, and scrolling checked; long description truncation at

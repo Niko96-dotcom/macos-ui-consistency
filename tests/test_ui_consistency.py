@@ -1,4 +1,4 @@
-"""Tests for ui_consistency.py (frozen v0.1 contract). unittest + subprocess CLI."""
+"""Tests for ui_consistency.py (legacy and explicit shared-scope contracts). unittest + subprocess CLI."""
 import json
 import math
 import os
@@ -255,6 +255,107 @@ class CompareTests(unittest.TestCase):
         if expect_code is not None:
             self.assertEqual(r.returncode, expect_code, r.stderr)
         return r, o
+
+    def test_shared_scopes_compare_only_named_consumers_across_families(self):
+        for scope in ("window", "component"):
+            with self.subTest(scope=scope), tempfile.TemporaryDirectory() as td:
+                rule = base_rule(scope=scope, surface_ids=["nav", "options"])
+                del rule["family"]
+                surfaces = [base_surf(id="nav", family="navigation"),
+                            base_surf(id="options", family="inspector",
+                                      measurements=[base_meas(value=30)]),
+                            base_surf(id="unrelated", family="inspector")]
+                _, out = self._run_compare(td, {"schema_version": 2, "rules": [rule]},
+                                          {"schema_version": 1, "surfaces": surfaces}, 1)
+                self.assertEqual({f["surface_id"]: f["status"] for f in read_json(out)["findings"]},
+                                 {"nav": "pass", "options": "fail", "unrelated": "excluded"})
+
+    def test_shared_scope_missing_target_is_not_silent_success(self):
+        with tempfile.TemporaryDirectory() as td:
+            rule = base_rule(scope="window", surface_ids=["s1", "missing"])
+            del rule["family"]
+            _, out = self._run_compare(td, {"schema_version": 2, "rules": [rule]},
+                                      {"schema_version": 1, "surfaces": [base_surf()]}, 3)
+            obj = read_json(out)
+            self.assertEqual(obj["summary"]["pass"], 1)
+            gap = next(f for f in obj["findings"] if f["surface_id"] == "missing")
+            self.assertEqual(gap["status"], "unverified")
+            report = Path(td) / "report.md"
+            r = run_cli("report", str(out), "--output", str(report))
+            self.assertEqual(r.returncode, 0, r.stderr)
+            self.assertIn("missing", report.read_text())
+
+    def test_shared_scope_preserves_evidence_and_ownership_gates(self):
+        cases = [
+            ({"variant": "compact"}, "unverified", 3),
+            ({"environment_id": "other"}, "unverified", 3),
+            ({"status": "blocked", "reason": "permission"}, "unverified", 3),
+            ({"status": "unvisited"}, "unverified", 3),
+            ({"measurements": []}, "unverified", 3),
+            ({"measurements": [base_meas(evidence=[])]}, "unverified", 3),
+            ({"measurements": [base_meas(coordinate_space="window-local")]}, "unverified", 3),
+            ({"measurements": [base_meas(uncertainty=1)]}, "unverified", 3),
+            ({"owner": "system"}, "excluded", 0),
+            ({"status": "excluded", "reason": "intentional exception"}, "excluded", 0),
+        ]
+        for changes, status, code in cases:
+            with self.subTest(changes=changes), tempfile.TemporaryDirectory() as td:
+                rule = base_rule(scope="component", surface_ids=["s1", "target"])
+                del rule["family"]
+                _, out = self._run_compare(td, {"schema_version": 2, "rules": [rule]},
+                                          {"schema_version": 1, "surfaces": [
+                                              base_surf(), base_surf(id="target", family="inspector", **changes)]}, code)
+                target = next(f for f in read_json(out)["findings"] if f["surface_id"] == "target")
+                self.assertEqual(target["status"], status)
+
+    def test_shared_scope_rejects_ambiguous_or_malformed_selection(self):
+        cases = [
+            {"scope": "window"},
+            {"scope": "window", "surface_ids": []},
+            {"scope": "window", "surface_ids": "s1"},
+            {"scope": "window", "surface_ids": ["s1", "s1"]},
+            {"scope": "window", "surface_ids": [" "]},
+            {"scope": "window", "surface_ids": [{}]},
+            {"scope": "window", "surface_ids": ["s1"], "family": "browser"},
+            {"scope": "family", "surface_ids": ["s1"], "family": "browser"},
+            {"scope": "unknown"}, {"scope": []},
+        ]
+        for fields in cases:
+            with self.subTest(fields=fields), tempfile.TemporaryDirectory() as td:
+                rule = base_rule()
+                del rule["family"]
+                rule.update(fields)
+                _, out = self._run_compare(td, {"schema_version": 2, "rules": [rule]},
+                                          {"schema_version": 1, "surfaces": [base_surf()]}, 2)
+                self.assertFalse(out.exists())
+
+    def test_scope_extension_requires_v2_and_legacy_results_are_unchanged(self):
+        with tempfile.TemporaryDirectory() as td:
+            rule = base_rule(scope="window", surface_ids=["s1"])
+            self._run_compare(td, {"schema_version": 1, "rules": [rule]},
+                              {"schema_version": 1, "surfaces": [base_surf()]}, 2)
+            legacy = read_json(EXAMPLE_CONTRACTS)
+            _, out = self._run_compare(td, legacy, read_json(EXAMPLE_MEASUREMENTS), 1)
+            self.assertEqual(out.read_bytes(), EXAMPLE_EXPECTED.read_bytes())
+            legacy["schema_version"] = 2
+            legacy["rules"][0]["scope"] = "family"
+            _, out = self._run_compare(td, legacy, read_json(EXAMPLE_MEASUREMENTS), 1)
+            self.assertEqual(out.read_bytes(), EXAMPLE_EXPECTED.read_bytes())
+
+    def test_shared_scope_determinism_and_no_applicable_gap(self):
+        with tempfile.TemporaryDirectory() as td:
+            rule = base_rule(scope="window", surface_ids=["missing", "s1"])
+            del rule["family"]
+            contracts = {"schema_version": 2, "rules": [rule]}
+            measurements = {"schema_version": 1, "surfaces": [base_surf(owner="system"), base_surf(id="other")]}
+            _, out = self._run_compare(td, contracts, measurements, 3)
+            before = out.read_bytes()
+            self.assertTrue(any(f["surface_id"] is None and f["status"] == "unverified"
+                                for f in read_json(out)["findings"]))
+            rule["surface_ids"].reverse()
+            measurements["surfaces"].reverse()
+            _, out = self._run_compare(td, contracts, measurements, 3)
+            self.assertEqual(before, out.read_bytes())
 
     def test_compare_pass_exit0(self):
         with tempfile.TemporaryDirectory() as td:

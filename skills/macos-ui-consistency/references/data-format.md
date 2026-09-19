@@ -102,9 +102,12 @@ Fields:
 }
 ```
 
-- `schema_version: 1` (int, exactly 1).
+- `schema_version: 1 | 2` (int, not bool). Version 1 keeps family-only rules;
+  version 2 adds explicit scopes. Measurements and comparison outputs remain
+  version 1. Older CLIs reject contracts version 2 instead of silently ignoring
+  shared relationships.
 - `rules: non-empty list` (empty is invalid, never green).
-- Each rule requires: `id`, `family`, `variant`, `role`, `metric` (non-empty strings);
+- Each rule requires: `id`, `variant`, `role`, `metric` (non-empty strings);
   `expected` (finite number, not bool); `tolerance` (finite number >= 0, not bool);
   `unit`, `coordinate_space`, `environment_id`, `authority` (non-empty strings).
 - `role` is an app-owned content role (e.g. `contentTitle`), never native chrome
@@ -112,6 +115,46 @@ Fields:
 - No universal `expected`/`tolerance` defaults are applied; every rule declares its own.
 - Rule `id`s must be unique. No eval/expressions are supported or executed.
 - Unknown extra fields (e.g. `_note`) are tolerated and ignored.
+
+### Explicit scopes (contracts version 2)
+
+- `scope`: `family` (default), `window`, or `component`.
+- Family scope requires `family` (non-empty string), forbids `surface_ids`,
+  and retains the version 1 matching/exclusion behavior.
+- Window and component scopes require `surface_ids`: a non-empty list of
+  unique non-empty strings naming the exact expected consumers. They forbid
+  `family`; targets retain their own families in the measurements registry.
+  Both scopes use identical numeric evaluation; the distinction documents
+  whether the relationship belongs to window composition or shared controls.
+- Explicit `scope` or `surface_ids` fields in version 1 are rejected. Other
+  unknown metadata remains ignored. Version 1 rules still require `family`.
+- All existing measurement evidence, uncertainty, environment, unit, ownership,
+  and variant gates remain in force. Selection does not grant edit permission.
+
+Synthetic example: align a label row in two different app-owned panes against
+an app-chosen content-relative anchor. This is not a universal coordinate.
+
+```json
+{
+  "schema_version": 2,
+  "rules": [{
+    "id": "shared-label-row", "scope": "window",
+    "surface_ids": ["navigator", "tool-options"], "variant": "regular",
+    "role": "groupLabel", "metric": "topFromContentTop",
+    "expected": 76, "tolerance": 1,
+    "unit": "pt", "coordinate_space": "window-content-local",
+    "environment_id": "demo-regular", "authority": "app-decision"
+  }]
+}
+```
+
+Use the same declared origin for shared-window anchors, or measure a derived
+relationship (for example, distance from each pane's leading edge). The CLI
+compares supplied scalar values to the declared expectation; it does not
+subtract frames from different surfaces, resolve origins, evaluate expressions,
+or infer which relationships ought to hold. Supply those measurements with
+evidence. Appearance, materials, and optical balance need separate visual
+review; do not encode a subjective verdict as a numeric measurement.
 
 ## measurements schema
 
@@ -163,7 +206,8 @@ Fields:
 ```
 
 - `findings` sorted by `(rule_id, surface_id or "")`; `surface_id` may be `null`
-  only for the no-applicable-surface gap finding.
+  only for the no-applicable-surface gap finding. A named shared target absent
+  from measurements retains its declared ID in an `unverified` gap finding.
 - Each finding has `rule_id` (string), `surface_id` (string or `null`),
   `status: "pass" | "fail" | "unverified" | "excluded"`,
   `expected` (finite number or `null` where unknown; in practice always the rule value),
@@ -176,10 +220,16 @@ Rules per `rule × surface` pair (sorted inputs for determinism):
 
 - `owner == "system"` → `excluded` (`actual: null`, `evidence: []`).
 - `status == "excluded"` → `excluded`.
-- `family`/`variant` mismatch → `excluded` (intentional variants across families stay excluded, e.g. compact inspector vs browser).
-- Otherwise the surface is applicable (`captured`/`blocked`/`unvisited` with matching family/variant and `owner == "app"`):
+- Family scope: `family`/`variant` mismatch → `excluded` (intentional variants
+  stay excluded, e.g. compact inspector vs browser).
+- Window/component scope: unlisted surface → `excluded`; listed app-owned,
+  non-excluded surface with mismatched variant → `unverified` (capture the
+  requested variant). Every listed ID missing from measurements emits an
+  `unverified` gap finding. Explicitly excluded targets still need a reason.
+- Otherwise the surface is applicable (`captured`/`blocked`/`unvisited` with
+  matching family or explicit selection, matching variant, and `owner == "app"`):
   - `blocked`/`unvisited` → `unverified` (`actual: null`).
-  - `environment_id` missing or mismatched → `unverified` (when family/variant match).
+  - `environment_id` missing or mismatched → `unverified` (when scope and variant match).
   - No matching `(role, metric)` measurement, or `value == null`/missing → `unverified`.
   - Missing/empty `evidence` → `unverified` (even if numeric values would pass).
   - `unit` or `coordinate_space` mismatch (exact string equality) → `unverified`.

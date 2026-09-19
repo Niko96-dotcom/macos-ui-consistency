@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Bounded deterministic helper for macOS UI consistency.
 
-Three subcommands (frozen v0.1 contract):
+Three subcommands (legacy contracts plus explicit shared scopes):
   scan ROOT --output PATH [--force]
   compare CONTRACTS MEASUREMENTS --output PATH [--force]
   report COMPARISON --output PATH [--force]
@@ -535,8 +535,8 @@ def _validate_contracts(data: object) -> list[dict]:
     if "schema_version" not in data:
         raise ValueError("contracts: missing schema_version")
     sv = data["schema_version"]
-    if type(sv) is not int or sv != 1:
-        raise ValueError("contracts: schema_version must be 1")
+    if type(sv) is not int or sv not in (1, 2):
+        raise ValueError("contracts: schema_version must be 1 or 2")
     if "rules" not in data:
         raise ValueError("contracts: missing rules")
     rules = data["rules"]
@@ -552,7 +552,24 @@ def _validate_contracts(data: object) -> list[dict]:
         if rid in seen:
             raise ValueError(f"contracts: duplicate rule id {rid!r}")
         seen.add(rid)
-        family = _req_str(r, "family", ctx)
+        scope = r.get("scope", "family")
+        if scope not in ("family", "window", "component"):
+            raise ValueError(f"{ctx}: scope must be family, window, or component")
+        if sv == 1 and ("scope" in r or "surface_ids" in r):
+            raise ValueError(f"{ctx}: explicit scopes require contracts schema_version 2")
+        targets = r.get("surface_ids")
+        if scope == "family":
+            family = _req_str(r, "family", ctx)
+            if "surface_ids" in r:
+                raise ValueError(f"{ctx}: family scope cannot specify surface_ids")
+        else:
+            family = None
+            if "family" in r:
+                raise ValueError(f"{ctx}: shared scope uses surface_ids, not family")
+            if (not isinstance(targets, list) or not targets
+                    or any(not isinstance(x, str) or not x.strip() for x in targets)
+                    or len(set(targets)) != len(targets)):
+                raise ValueError(f"{ctx}: surface_ids must be a non-empty list of unique non-empty strings")
         variant = _req_str(r, "variant", ctx)
         role = _req_str(r, "role", ctx)
         metric = _req_str(r, "metric", ctx)
@@ -574,6 +591,8 @@ def _validate_contracts(data: object) -> list[dict]:
             {
                 "id": rid,
                 "family": family,
+                "scope": scope,
+                "surface_ids": targets,
                 "variant": variant,
                 "role": role,
                 "metric": metric,
@@ -712,7 +731,8 @@ def _do_compare(rules: list[dict], surfaces: list[dict]) -> tuple[list[dict], di
         applicable_ids: set[str] = set()
         for s in surfs_sorted:
             if (
-                s["family"] == rule["family"]
+                (s["family"] == rule["family"] if rule["scope"] == "family"
+                 else s["id"] in rule["surface_ids"])
                 and s["variant"] == rule["variant"]
                 and s["owner"] == "app"
                 and s["status"] != "excluded"
@@ -722,11 +742,22 @@ def _do_compare(rules: list[dict], surfaces: list[dict]) -> tuple[list[dict], di
             rid = rule["id"]
             sid = surf["id"]
             exp = rule["expected"]
+            if (rule["scope"] != "family" and sid in rule["surface_ids"]
+                    and surf["owner"] == "app" and surf["status"] != "excluded"
+                    and surf["variant"] != rule["variant"]):
+                findings.append({
+                    "rule_id": rid, "surface_id": sid, "status": "unverified",
+                    "expected": exp, "actual": None, "evidence": [],
+                    "reason": "declared shared-scope target has a different variant; capture requested variant",
+                })
+                continue
             if sid not in applicable_ids:
                 if surf["owner"] == "system":
                     reason = "system-owned surface excluded from app contracts"
                 elif surf["status"] == "excluded":
                     reason = f"surface status excluded: {surf.get('reason')}"
+                elif rule["scope"] != "family":
+                    reason = "surface not selected by explicit shared scope"
                 elif surf["family"] != rule["family"] or surf["variant"] != rule["variant"]:
                     reason = (
                         f"family/variant mismatch: rule {rule['family']}/{rule['variant']} "
@@ -916,6 +947,15 @@ def _do_compare(rules: list[dict], surfaces: list[dict]) -> tuple[list[dict], di
                         "evidence": list(match["evidence"]),
                     }
                 )
+        if rule["scope"] != "family":
+            present_ids = {s["id"] for s in surfs_sorted}
+            for missing_id in sorted(set(rule["surface_ids"]) - present_ids):
+                findings.append({
+                    "rule_id": rule["id"], "surface_id": missing_id,
+                    "status": "unverified", "expected": rule["expected"],
+                    "actual": None, "evidence": [],
+                    "reason": "declared shared-scope target missing; coverage gap, not success",
+                })
         if not applicable_ids:
             findings.append(
                 {
@@ -1142,7 +1182,7 @@ def cmd_report(comparison_str: str, output_str: str, force: bool) -> int:
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="ui_consistency.py",
-        description="Bounded deterministic helper for macOS UI consistency (frozen v0.1).",
+        description="Bounded deterministic helper for macOS UI consistency.",
     )
     sub = p.add_subparsers(dest="cmd", required=True)
     ps = sub.add_parser("scan", help="heuristic Swift candidate scan (read-only)")

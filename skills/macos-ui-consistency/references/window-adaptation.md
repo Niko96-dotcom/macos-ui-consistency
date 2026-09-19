@@ -89,7 +89,8 @@ self-contained when installed.
 12. **Envelope before polish.** Establish and runtime-TEST the usable
     sizing envelope (minimum usable, compact threshold, default) before
     auditing 1pt spacing. Spacing verdicts below the envelope are
-    invalid.
+    invalid. Current-size observations can still be reported with their captured
+    conditions while resize coverage remains explicitly unverified.
 
 ## What Apple does and does not require
 

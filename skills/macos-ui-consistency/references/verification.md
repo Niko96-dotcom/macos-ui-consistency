@@ -8,7 +8,9 @@ agent works with them.
 
 ## Evidence levels
 
-- **Measured:** geometry plus identified source cause.
+- **Measured:** supplied or reproduced geometry with method, uncertainty, and
+  evidence. Record whether independently reproduced; source cause is a separate
+  field and must be identified before a repair.
 - **Observed:** screenshot or manual evidence without tight geometry.
 - **Inferred:** heuristic or source-only hypothesis.
 
@@ -30,7 +32,8 @@ a patch but cannot claim a visually verified fix.
   taste, or unlisted surfaces. Empty inputs never report green; missing
   evidence, mismatched units, spaces, or environments, and blocked or
   unvisited surfaces resolve to unverified, and system-owned or
-  cross-family pairs are excluded by declaration.
+  unrelated cross-family pairs are excluded; explicit shared scopes select
+  named targets and report missing targets as unverified.
 - `report` renders a deterministic human-readable view of a comparison.
   It claims no exhaustive app coverage.
 
@@ -54,15 +57,19 @@ inconsistencies within current user authorization when all of these hold —
 
 Excluded from automatic repair: heuristic grouping or taste calls,
 choosing a new meaning for a control, shell extraction solely to
-homogenize, public-API or data-model effects, and cross-family
-unification. Those need an explicit user decision on scope and meaning.
+homogenize, public-API or data-model effects, and unrequested cross-family
+unification. An accepted app contract or the current user request can
+already authorize a shared relationship; do not ask again for each consumer.
+New design intent outside that authorization needs a user decision.
 Clear existing conventions evident in the app and routine scoped
 decisions needed to record and apply them may be derived and recorded
 without asking; ask only where material ambiguity about design intent,
 semantics, or scope remains. Frequency or majority alone never justifies
 a fix. Never infer a heuristic taste call as sufficiently certain just
 to fix it. Explicit audit-only, review, or planning requests prohibit
-every mutation; never expand an ordinary review request into fixes.
+app mutations; audit reports and evidence files may be written within the
+requested scope unless the user requires strictly read-only work. Never expand
+an ordinary review request into fixes.
 
 ## Repair flow
 
@@ -95,6 +102,14 @@ title/subtitle, header envelope, controls baseline, divider, and body
 start; other families declare their own roles). An
 explicit narrow-scope report (e.g., title leading only) cannot imply
 whole-page verified.
+
+## Whole-window and transition acceptance
+
+For cross-page tasks, apply [whole-window-review.md](whole-window-review.md)
+as well as numeric comparisons. Review a matched full-window contact sheet,
+inspect at readable scale, and exercise the transitions that can alter layout.
+Report geometry, transition stability, and optical/composition results
+separately; a missing visual pass cannot be replaced by source guards.
 
 ## Window-boundary proof (no source-only pass)
 
@@ -133,11 +148,12 @@ Negative controls (must stay excluded when declared intentional, never "fixed"):
 
 Acceptance (all measurable, same width/environment unless stated):
 
-- minimum usable (where resizing applies; fixed-size records N/A with
-  justification): no clipped primary control, no horizontal outer-page
+- minimum usable: fixed-size windows mark only resizing N/A with
+  justification and check these bounds at their declared size. Require
+  no clipped primary control, no horizontal outer-page
   scroll except where deliberately declared (for example a timeline
   workspace with constrained panes), no unreachable action at narrowest
-  supported width AND height;
+  supported width AND height where resizing applies;
 - task-priority-first (per declared task priority, never always-detail):
   controls for the declared primary task stay operable as the window
   narrows; any collapse applies only to panes declared optional/

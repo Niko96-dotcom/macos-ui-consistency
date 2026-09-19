@@ -1,6 +1,47 @@
 # Validation scope
 
-This is a v0.1 skill and deterministic helper, not a benchmarked UI repair engine.
+This is a skill and deterministic helper, not a benchmarked UI repair engine.
+
+## Relational guidance update (2026-09-19)
+
+- Added scoped guidance for paired view-switch slots, outer/inner content
+  bounds, populated growth containment, and appearance-state review.
+- Muse produced the documentation from retrieved owner feedback and the current
+  app contract. A Grok review exercised three separate synthetic holdouts:
+  a paired editor toggle with intentional unequal panes, inner-versus-outer
+  form caps with valid nested scrolling, and fixed-size populated overflow.
+  It identified the intended defects, preserved intentional differences and
+  native focus, and withheld optical and missing-appearance verification.
+- Review found discovery and fixed-size N/A wording ambiguities. Integration
+  moved the reference into the general workflow, clarified that only resize
+  checks are N/A for fixed windows, and put system-material exclusions first.
+- The [new transfer scenarios](../evals/relational-transfer.md) remain unexecuted
+  runtime scenarios. The holdout exercise was text-only reasoning, not an app
+  run, visual acceptance, or a measured improvement benchmark.
+- This update changes documentation only; comparator behavior and schema are
+  unchanged. The existing 53 Python tests pass, and skill structure, local
+  links, and whitespace checks pass. No product rebuild is needed for this delta.
+
+## Whole-window upgrade (2026-09-18)
+
+- The local Python suite passes 53 tests. New regression cases exercise explicit
+  window/component targets across families, absent targets, requested-variant
+  gaps, unrelated/system/intentional exclusions, evidence and environment gates,
+  malformed selectors, deterministic ordering, and report generation with gaps.
+- Legacy synthetic comparison output remains byte-identical, including when
+  represented as a version 2 family contract. Explicit scopes require version 2;
+  older CLI versions reject that contract version.
+- Workflow guidance now separates geometry, transition stability, and optical
+  composition, and preserves app-specific design decisions outside the skill.
+- A read-only independent agent exercise against supplied multi-pane evidence
+  identified label drift, a moving primary action, and a resting-field affordance
+  issue; preserved an intentional wider inspector and visible system focus;
+  withheld complete verification for missing build/resize evidence. Its feedback
+  clarified evidence labels and audit-only reporting scope. This was a synthetic
+  reasoning exercise, not a runtime trial or measured improvement benchmark.
+- The native fixture builds locally after this upgrade.
+- This upgrade does not establish new live-app visual or repair-success results.
+  Historical fixture results below retain their original scope.
 
 ## Exercised locally
 

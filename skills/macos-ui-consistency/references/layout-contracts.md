@@ -1,7 +1,8 @@
 # Relational layout contracts
 
-Compare roles within the same family, density, and environment — never
-absolute screen coordinates. A contract states what the app decided its
+Compare declared relationships at the same density and environment — never
+absolute screen coordinates. Page families remain the default scope; explicit
+window and component contracts can connect named surfaces across families. A contract states what the app decided its
 screens share; Apple guidance informs the vocabulary, not the values.
 
 Relevant Apple sources: [HIG Layout](https://developer.apple.com/design/human-interface-guidelines/layout)
@@ -19,7 +20,29 @@ list pages (content title, body, actions, filters, tables), settings and
 forms (readable width, label and control columns), editors and canvases
 (workspace priority), sheets, popovers, and inspectors (compact rules).
 Same role plus same family plus same density plus same environment shares
-a contract. Across families, difference is expected and must not flag.
+a family contract. Across families, differences stay excluded unless an
+explicit window or component contract declares that relationship.
+
+## Three contract levels
+
+- **Window:** shared app-owned header bands, content starts, panel widths,
+  materials, and corresponding label/control rows across named panes.
+- **Family:** the page's composition, content hierarchy, adaptation, and
+  intentional variants. Different bodies can share one window header.
+- **Component:** appearance and geometry of equivalent controls across
+  named consumers: shape, height, fill, grouping, selection and focus.
+  Equivalent appearance does not require identical behavior or AX roles.
+
+Declare rationale and targets from the accepted app design or user intent.
+Do not infer equal panel widths, centered/leading headers, joined selectors,
+or bottom-pinned actions as universal platform requirements. Keep native
+chrome outside app-owned contracts. Model only the shared relationship;
+never relabel unrelated pages as one family to get a comparator pass.
+Numeric shared scopes use contracts schema 2 with explicit surface IDs;
+see [data-format.md](data-format.md). Materials, optical weight, and control
+semantics need visual/interaction evidence outside the numeric comparator.
+State-transition and whole-window acceptance are described in
+[whole-window-review.md](whole-window-review.md).
 
 Variants (subtitle absent, narrow stacking, inspector open, scrolled or
 sticky state) belong in the contract's variant field so narrow or wrapped
@@ -69,8 +92,9 @@ become defaults. Normative field lists live in [data-format.md](data-format.md)
 - **Environment or derived — computed:** breakpoints from usable width,
   label-column width with a wrap bound, header height from content plus
   variant, overflow and stacking decisions. Usable width/height envelope
-  first (see [window-adaptation.md](window-adaptation.md)): no spacing
-  verdict below the tested envelope is valid.
+  first (see [window-adaptation.md](window-adaptation.md)). Findings from a
+  captured size may be reported for that size while the envelope is unverified;
+  do not claim compact/minimum acceptance or extrapolate below tested sizes.
 
 ## Platform metrics vs app values
 
@@ -106,14 +130,14 @@ size ships from this skill; no HIG sentence becomes an app default.
 6. **Window adaptation.** Usable sizing envelope before spacing polish.
    See [window-adaptation.md](window-adaptation.md).
 
-## Shared header envelope (same family/environment only)
+## Shared header envelope (declared scope and environment)
 
 Wrapped copy length itself is intentional, but downstream drift of shared
 shell anchors (for example, a browser family's controls baseline, divider,
 or body start) across sibling pages at the same width violates the shared
 shell and is actionable.
 
-Where sibling headers in a declared same family and environment differ only
+Where sibling headers in a declared family or shared window contract differ only
 by wrapping copy length, downstream anchors must stay stable by a declared
 mechanism. One allowed pattern is a shared width-dependent, content-derived
 header/description envelope over sibling descriptions: a SwiftUI Layout or
@@ -125,8 +149,8 @@ height with wrapping copy confined below the anchor line. Whatever the
 mechanism, it must hold with no truncation, no shortened copy, no per-page
 offsets, and no stale height on resize or inspector-open (narrow widths and
 inspector-open re-resolve live; no historical max cache). The mechanism
-applies only within the declared same family/environment, never globally
-across every page. Preserve differences the semantic contract declares
+applies within the declared family or explicitly shared window contract
+at the same environment, never indiscriminately across every page. Preserve differences the semantic contract declares
 intentional plus system chrome; never exempt gutter differences by type
 alone.
 

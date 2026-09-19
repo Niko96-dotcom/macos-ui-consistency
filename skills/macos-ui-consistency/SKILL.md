@@ -7,8 +7,8 @@ license: MIT
 # macOS UI Consistency
 
 Guidance-driven audit-and-alignment for SwiftUI / AppKit apps on macOS.
-Finds cross-screen drift (shells, keylines, type roles, control sizing,
-grouping), reports it with evidence, and fixes only clear accidental
+Finds cross-screen drift (whole-window composition, shells, keylines,
+control appearance, state transitions, and optical hierarchy), reports it with evidence, and fixes only clear accidental
 app-owned inconsistencies. This is not a generic Swift rewriter and not
 an exhaustive scanner.
 
@@ -52,18 +52,25 @@ calibrated per app and family; no universal dimensions are shipped here.
 
 ## Workflow
 
-1. **Discover.** Build a persistent per-app surface inventory (stable
+1. **Discover.** Verify the intended checkout/revision and running executable
+   before capturing; app name alone cannot identify a current build. Read
+   the app’s accepted design contract. Build a persistent per-app surface inventory (stable
    surface IDs, source, build, owner, prereqs, route, family, variant,
    status, evidence). See [references/discovery.md](references/discovery.md).
-2. **Contract.** Declare relational role-to-role rules per page family in
-   the same environment. No cross-family absolute coordinates.
+2. **Contract.** Declare whole-window relationships, page-family layouts,
+   and shared-control rules in the same environment. Cross-family
+   relationships require explicit app intent and targets; no blanket normalization.
    See [references/layout-contracts.md](references/layout-contracts.md).
 3. **Measure.** Capture pane-local values with method, uncertainty, and
    evidence refs. Establish and runtime-test the usable sizing envelope
    where the app supports resizing (normal/compact/narrowest,
    applicable pane combinations) before polishing spacing. Fixed-size
-   windows justify N/A with reason. Source-only work cannot claim
-   visual verification.
+   windows mark only resize checks N/A with reason; populated-content
+   bounds and reachability still need checking at their declared size.
+   For view-switch slots, centered content, growing regions, or material
+   states (including single-surface tasks), read
+   [references/relational-review.md](references/relational-review.md).
+   Source-only work cannot claim visual verification.
 4. **Compare and report** with the sibling CLI (schemas owned by
    [references/data-format.md](references/data-format.md); read it for normative fields).
    Resolve scripts relative to the loaded SKILL.md directory, not the repo root.
@@ -84,11 +91,21 @@ calibrated per app and family; no universal dimensions are shipped here.
    `compare` checks supplied numeric metrics only, never screenshots or
    inferred semantics. Add `--force` to allow output overwrite; symlinked
    outputs are refused.
-5. **Repair if eligible, then converge.** See [references/verification.md](references/verification.md).
+5. **Repair if eligible, then converge.** Generalize each user correction
+   to equivalent consumers; do not wait for the user to name each instance.
+   Verify geometry, state transitions, and visual composition separately.
+   Persist accepted rules and intentional exceptions in the app’s contract.
+   See [references/verification.md](references/verification.md).
    Re-run on an unchanged app must yield zero new findings. Never silently
    re-baseline a failing reference to quiet it.
 
 ## Cross-page alignment scope
+
+Inspect the whole window as well as each page: app-owned header bands,
+sidebar/content/inspector relationships, materials, control silhouettes,
+and optical hierarchy. For cross-page tasks, read
+[references/whole-window-review.md](references/whole-window-review.md).
+A shared component or matching AX frames cannot establish visual success.
 
 Cross-page alignment requires inventorying and comparing the declared
 shared shell anchors for that page family — whatever roles the contract
