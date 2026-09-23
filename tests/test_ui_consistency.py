@@ -151,6 +151,9 @@ class ScanTests(unittest.TestCase):
             bd = src / ".build"
             bd.mkdir()
             (bd / "Gen.swift").write_text("WindowGroup { }\n", encoding="utf-8")
+            audit = src / ".audit"
+            audit.mkdir()
+            (audit / "Snapshot.swift").write_text("WindowGroup { }\n", encoding="utf-8")
             out = Path(td) / "out.json"
             r = run_cli("scan", str(src), "--output", str(out))
             self.assertEqual(r.returncode, 0, r.stderr)
@@ -159,6 +162,7 @@ class ScanTests(unittest.TestCase):
             self.assertEqual(sources, sorted(sources))
             self.assertNotIn(".git/Hidden.swift", sources)
             self.assertFalse(any(".build" in s for s in sources))
+            self.assertNotIn(".audit/Snapshot.swift", sources)
 
     def test_scan_skips_symlinks(self):
         with tempfile.TemporaryDirectory() as td:
@@ -992,6 +996,41 @@ class ReportRegressionTests(unittest.TestCase):
                 "no exhaustive app coverage claim",
             ]:
                 self.assertIn(expected, text)
+
+    def test_report_escapes_supplied_markdown_and_html(self):
+        with tempfile.TemporaryDirectory() as td:
+            obj = self._valid_comparison_obj(td)
+            obj["findings"][0]["reason"] = "<img src=x onerror=alert(1)> | ![remote](https://example.test/x)"
+            obj["findings"][0]["evidence"] = ["[click](https://example.test)"]
+            obj["limitations"] = ["<script>bad()</script>"]
+            comp = Path(td) / "supplied.json"
+            write_json(comp, obj)
+            out = Path(td) / "r.md"
+            r = run_cli("report", str(comp), "--output", str(out))
+            self.assertEqual(r.returncode, 0, r.stderr)
+            report = out.read_text(encoding="utf-8")
+            self.assertNotIn("<img", report)
+            self.assertNotIn("<script>", report)
+            self.assertNotIn("![remote]", report)
+            self.assertNotIn("[click](", report)
+            self.assertIn("&#124;", report)
+
+    def test_report_rejects_unsupported_green_findings(self):
+        for mutation in (
+            lambda obj: obj["findings"][0].update(actual=None),
+            lambda obj: obj["findings"][0].update(evidence=[]),
+            lambda obj: obj["findings"][0].update(surface_id=None),
+            lambda obj: obj.update(limitations=[{"arbitrary": "object"}]),
+        ):
+            with tempfile.TemporaryDirectory() as td:
+                obj = self._valid_comparison_obj(td)
+                mutation(obj)
+                bad = Path(td) / "bad.json"
+                write_json(bad, obj)
+                out = Path(td) / "r.md"
+                r = run_cli("report", str(bad), "--output", str(out))
+                self.assertEqual(r.returncode, 2, r.stderr)
+                self.assertFalse(out.exists())
 
 
 class CompareBoundaryTests(unittest.TestCase):

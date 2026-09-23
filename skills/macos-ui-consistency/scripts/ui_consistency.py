@@ -11,6 +11,7 @@ Standard library only, Python >= 3.10. No source edits. Deterministic JSON.
 from __future__ import annotations
 
 import argparse
+import html
 import json
 import math
 import os
@@ -35,7 +36,7 @@ COMPARE_LIMITATIONS = [
     "no exhaustive app coverage claim; unmeasured is unverified, never pass",
 ]
 
-DEFAULT_IGNORE = {".git", ".build", ".swiftpm", "vendor", "node_modules", "DerivedData"}
+DEFAULT_IGNORE = {".git", ".build", ".swiftpm", ".audit", "vendor", "node_modules", "DerivedData"}
 
 # Whole-word keywords searched per line after lexical masking.
 SCAN_RE = re.compile(
@@ -1073,6 +1074,10 @@ def _validate_comparison(data: object) -> dict:
         for e in f["evidence"]:
             if not isinstance(e, str) or e == "":
                 raise ValueError(f"{ctx}: evidence entries must be non-empty strings")
+        if f["status"] in ("pass", "fail") and (f["actual"] is None or not f["evidence"]):
+            raise ValueError(f"{ctx}: pass/fail requires actual value and evidence")
+        if f["surface_id"] is None and f["status"] != "unverified":
+            raise ValueError(f"{ctx}: null surface_id is reserved for unverified coverage gaps")
         pair = (f["rule_id"], f["surface_id"])
         if pair in seen_pairs:
             raise ValueError(f"{ctx}: duplicate finding for rule_id {f['rule_id']!r} surface_id {f['surface_id']!r}")
@@ -1080,6 +1085,8 @@ def _validate_comparison(data: object) -> dict:
         recomputed[f["status"]] += 1
     if "limitations" not in data or not isinstance(data["limitations"], list):
         raise ValueError("comparison: limitations must be a list")
+    if any(not isinstance(lim, str) or not lim for lim in data["limitations"]):
+        raise ValueError("comparison: limitations entries must be non-empty strings")
     for k in ("pass", "fail", "unverified", "excluded"):
         if data["summary"][k] != recomputed[k]:
             raise ValueError(
@@ -1099,7 +1106,13 @@ def _fmt_cell(v: object) -> str:
 
 
 def _md_escape(s: str) -> str:
-    return s.replace("|", "/").replace("\r\n", " ").replace("\n", " ").replace("\r", " ")
+    s = s.replace("\r\n", " ").replace("\n", " ").replace("\r", " ")
+    s = html.escape(s, quote=False)
+    return s.translate(str.maketrans({
+        "|": "&#124;", "!": "&#33;", "[": "&#91;", "]": "&#93;",
+        "(": "&#40;", ")": "&#41;", "*": "&#42;", "_": "&#95;",
+        "`": "&#96;", "~": "&#126;", "\\": "&#92;",
+    }))
 
 
 def cmd_report(comparison_str: str, output_str: str, force: bool) -> int:

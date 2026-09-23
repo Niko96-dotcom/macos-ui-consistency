@@ -19,9 +19,11 @@ Group sibling screens before writing rules. Typical families: browser or
 list pages (content title, body, actions, filters, tables), settings and
 forms (readable width, label and control columns), editors and canvases
 (workspace priority), sheets, popovers, and inspectors (compact rules).
-Same role plus same family plus same density plus same environment shares
-a family contract. Across families, differences stay excluded unless an
-explicit window or component contract declares that relationship.
+Related roles in the same family, density, and environment are candidates
+for a shared contract when app intent supports it. Matching names or visual
+similarity alone do not establish that intent. Across families, differences
+stay excluded unless an explicit window or component contract declares that
+relationship.
 
 ## Three contract levels
 

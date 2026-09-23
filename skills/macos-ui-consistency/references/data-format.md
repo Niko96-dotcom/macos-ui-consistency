@@ -42,7 +42,7 @@ finding with `surface_id: null`, so it is never silently green (exit 3).
 
 Input: `ROOT` directory scanned recursively for `*.swift` files.
 
-- Default ignored names at any level: `.git`, `.build`, `.swiftpm`, `vendor`, `node_modules`, `DerivedData`.
+- Default ignored names at any level: `.git`, `.build`, `.swiftpm`, `.audit`, `vendor`, `node_modules`, `DerivedData`.
 - Symlinks are never followed; symlinked files/dirs are skipped. A symlinked `ROOT` is invalid (exit 2).
 - Any unreadable file (I/O error, invalid UTF-8) aborts with exit 2; no partial “complete” output is written.
 - Lexical masking strips `//` line comments, nested `/* … */` block comments,
@@ -250,10 +250,12 @@ Compare `limitations` (exact):
 
 ## report: Markdown
 
-`report COMPARISON --output PATH` validates the comparison object
+`report COMPARISON --output PATH` checks the comparison object's structure
 (`schema_version`, `kind`, non-empty `findings` with `rule_id/surface_id/status/expected/actual/reason/evidence`,
 `summary` non-negative ints exactly matching recomputed finding counts, unique `(rule_id, surface_id)` pairs,
-`limitations` list) and writes deterministic Markdown:
+`limitations` list of non-empty strings). A `pass` or `fail` finding requires
+a finite actual value and non-empty evidence; a null `surface_id` is reserved
+for unverified coverage gaps. It writes deterministic Markdown:
 
 - `# UI Consistency Comparison Report`, deterministic intro (no exhaustive-coverage claim),
   `## Summary` (`pass/fail/unverified/excluded` counts),
@@ -261,6 +263,10 @@ Compare `limitations` (exact):
   `## Limitations` bullets, and a closing coverage note.
 - Contradictory `summary` counts, empty `findings`, and semantically duplicate findings (same `rule_id` + `surface_id`) are invalid (exit 2), never green.
 - Intrinsic `compare` limitations are always maintained in the report: any missing intrinsic entries are appended, so an empty supplied `limitations` still yields the four intrinsic bullets (never `none declared` for that case).
+- Supplied text is escaped as literal Markdown table/list content; it cannot
+  inject Markdown link or image syntax or raw HTML. A renderer may still
+  auto-link a plain URL. The report does not recompute verdicts from contracts
+  and measurements; use `compare` output as its input.
 - Same overwrite/symlink/input-distinct rule as above.
 
 ## Capability limitations

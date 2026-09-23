@@ -1,7 +1,8 @@
 # Verification, repair eligibility, and convergence
 
 Metrics catch drift; inspection catches hierarchy, optical balance, and
-material behavior. Visual review stays mandatory. Normative schemas and
+material behavior. Visual review is required before claiming visual acceptance;
+source-only work reports that outcome as unverified. Normative schemas and
 the comparator's pass/fail/unverified math live in
 [data-format.md](data-format.md) (tooling-owned); this file states how the
 agent works with them.
@@ -51,7 +52,8 @@ inconsistencies within current user authorization when all of these hold —
   demonstrated as accidental in an existing shared component;
 - the exact app-owned location is known;
 - the change alters no semantics, behavior, API, or persistent data;
-- all consuming surfaces are known in the registry (dependency closure);
+- affected consumers and likely shared-component reusers have been traced;
+  any unvisited consumers remain named as unverified;
 - verification capability suffices (before-evidence exists and
   after-evidence is capturable).
 
@@ -75,12 +77,14 @@ an ordinary review request into fixes.
 
 Candidate → before-evidence → patch → build plus focused behavior and
 visual checks → accepted or failed/unverified. Before/after observations
-gate fixes, not numeric confidence scores.
+gate automatic fixes, not numeric confidence scores. If the user explicitly
+requests a source fix but runtime access is unavailable, complete feasible
+source/build checks and report rendered behavior as unverified.
 
 - Fix once in the shared shell, component, or value; all pages converge.
-- Re-measure every consumer in the same family plus known cross-family
-  reusers, at default and narrow widths, and confirm intentional
-  differences still pass.
+- Re-check affected consumers in the same family plus known cross-family
+  reusers, at sizes relevant to the change, and confirm intentional
+  differences still hold. Name any unvisited consumers.
 - Preserve keyboard focus, accessibility order, and interaction; preserve
   unrelated work; undo only owned changes when safe, else report the
   exact partial state. A failed repair never counts as fixed.
@@ -105,16 +109,19 @@ whole-page verified.
 
 ## Whole-window and transition acceptance
 
-For cross-page tasks, apply [whole-window-review.md](whole-window-review.md)
-as well as numeric comparisons. Review a matched full-window contact sheet,
-inspect at readable scale, and exercise the transitions that can alter layout.
+For cross-page tasks, apply [whole-window-review.md](whole-window-review.md).
+Review matched full-window captures together at readable scale and exercise
+the transitions that can alter layout. Use numeric comparisons when the
+relationship and evidence support them.
 Report geometry, transition stability, and optical/composition results
 separately; a missing visual pass cannot be replaced by source guards.
 
 ## Window-boundary proof (no source-only pass)
 
 Source declaration never passes. Startup-compact alone never proves the
-boundary. Required runtime matrix per sibling page:
+boundary. For a broad sizing audit, use a risk-selected runtime matrix across
+the relevant sibling pages. For a focused repair, test the affected sizing
+boundary and report the remainder as unverified:
 
 - states: normal (default) + compact + narrowest (drag beyond declared
   minimum where the platform permits, then release back); declared
@@ -129,7 +136,7 @@ boundary. Required runtime matrix per sibling page:
 - both resize directions (wide→narrow, narrow→wide) and both navigation
   orders (shortest→longest, longest→shortest) with post-resize re-measure
   to catch stale height/branch, where resizing applies;
-- keyboard + VoiceOver spot-check in compact (same identifiers/focus,
+- keyboard and, where available, VoiceOver spot-check in compact (same identifiers/focus,
   reachable overflow actions, visible selection value, no arbitrarily
   scaled controls; native small/mini sizes in context remain allowed).
 
@@ -170,11 +177,10 @@ Acceptance (all measurable, same width/environment unless stated):
   tolerance at each tested state; selection and control state survives
   resize and navigation.
 
-Coordinator validation needs (no automated tests claimed here): captured
-screenshots or manual pane-local measurements per sibling page at the same
-width, covering shortest vs longest header at app-declared default and
-narrow widths, with applicable pane combinations closed and open, both
-navigation orders, plus resize after measurement to prove no stale height.
+Cross-page acceptance needs captured screenshots or manual pane-local
+measurements for the affected sibling pages at matched widths and relevant
+pane states. Include shortest and longest content, both navigation orders,
+and resizing after measurement when these can affect the relationship.
 Map each claim to its evidence and contract; unmeasured combinations stay
 unverified.
 

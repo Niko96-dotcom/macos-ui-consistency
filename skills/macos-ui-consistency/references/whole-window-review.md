@@ -60,14 +60,16 @@ intentional alternate layouts use separate variant contracts.
 
 ## Completion evidence
 
-- Capture every affected consumer at the same window size, appearance,
+- Capture affected consumers at the same window size, appearance,
   scale, pane configuration, and scroll position. Compare full-window images
   together, then inspect individual controls at readable scale. Cropped title
   strips alone cannot establish whole-window acceptance.
 - Exercise the relevant transitions and the resizing matrix in
   [verification.md](verification.md). Check that shared actions retain their
   declared position even when sibling pages have different option counts.
-- Audit the complete set of relationships, not only those last changed.
+- Audit the relationships affected by the change, including shared consumers
+  that might have moved with it. For a whole-app audit, cover the declared
+  full set.
   A second unchanged pass yielding no code edits proves idempotence only;
   it does not prove visual quality or completeness.
 - Report checked consumers, blocked states, deliberate differences, and

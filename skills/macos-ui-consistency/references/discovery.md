@@ -17,7 +17,8 @@ surface can compose many views. System-owned presentations (file panels,
 system alerts) are navigation coverage only: noted as reachable, assigned
 `owner: system`, never measured against app body keylines, never edited.
 
-Only app-owned layout surfaces count toward the layout denominator.
+Only app-owned layout surfaces count toward the layout denominator. A focused
+review names checked surfaces without implying a complete inventory.
 
 ## Build identity before traversal
 
@@ -28,7 +29,7 @@ After rebuild/relaunch, confirm the evidence belongs to that artifact. Check
 session availability and whether a window is reachable before treating absent
 windows as a layout regression. Never change lock/security settings to test UI.
 
-## Two-pass discovery
+## Two-pass discovery for broad audits
 
 **Pass A — static candidates.** Targeted search plus manual triage for
 scene entry points (`WindowGroup`, `Window`, `DocumentGroup`, `Settings`,
@@ -45,11 +46,12 @@ string literals must not become findings; multiline Swift forms are
 handled conservatively. Line edits may shift candidate IDs; stable surface
 IDs are curated separately in the inventory.
 
-**Pass B — dynamic traversal.** From each entry point, walk the running
-app with reproducible steps: open settings and auxiliary windows, expand
-disclosure groups, open overflow and contextual menus, scroll lazy
-content, resize to minimum, default, and wide, toggle sidebar and
-inspector. Capture the route so another run can repeat it.
+**Pass B — dynamic traversal.** From each relevant entry point, walk the
+running app with reproducible steps. Open applicable windows and controls,
+scroll populated content, and exercise the size and pane states that could
+affect the audited relationships. Capture the route so another run can
+repeat it. A broad coverage claim requires traversal of the full known
+inventory; a focused finding needs its affected route and states.
 
 **Reconcile explicitly:**
 
@@ -63,17 +65,19 @@ Manual curated manifest plus heuristic candidate scan. Cheap and
 host-neutral. Explicitly not exhaustive static reachability and never
 described as such.
 
-## Persistent registry (per-app data, outside the skill)
+## Persistent registry for broad or repeated audits (per-app data, outside the skill)
 
-Maintain `inventory/` alongside the app under test: surfaces registry,
-contracts, exceptions/allowlist, and evidence. Suggested per-surface
+Use the app's existing audit location for a surfaces registry, contracts,
+intentional exceptions, and evidence. Do not create a new top-level
+`inventory/` directory for a focused task unless the app already uses one.
+Suggested per-surface
 record: stable ID, owner (`app` / `system`), source revision and build
 config, route and prerequisites, family and variant, environment key,
 status with reason, evidence refs.
 
 Lifecycle: `discovered → reachable → captured → checked`, with terminal
 `blocked (reason)` and `excluded (reason)`. Exclusion without a reason is
-forbidden. Deleting the registry resets the denominator and must be
+forbidden. Deleting an existing registry resets the denominator and must be
 reported as such.
 
 Alongside the list, keep a navigation graph (nodes are surfaces, edges
@@ -84,14 +88,16 @@ Cartesian product.
 
 ## Honest completeness wording
 
-Report the denominator every run, for example: N known app-owned layout
-surfaces in this build/revision; M checked, K blocked on stated gates, J
-flag-gated unvisited; plus S system-owned presentations covered for
+For a broad inventory audit, report the denominator, for example: N known
+app-owned layout surfaces in this build/revision; M checked, K blocked on
+stated gates, J flag-gated unvisited; plus S system-owned presentations covered for
 navigation only. Inaccessible, account-gated, hardware-gated, flag-gated,
 and destructive flows stay in the denominator as blocked with the exact
 gate. Destructive flows are audited via fixtures or mocks, never live
 data. Lazy content is captured at top plus scrolled positions. Unknown
-universes are never labeled complete and never given percentages.
+universes are never labeled complete and never given percentages. For a
+focused review, report checked surfaces and relevant unvisited states
+without manufacturing an app-wide denominator.
 Inability to measure a surface means unverified, never pass.
 
 ## Capability notes

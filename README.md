@@ -39,7 +39,7 @@ the app choice, not a platform value):
 - [Validation scope](docs/VALIDATION.md) — exercised behavior and remaining limits.
 - [Fixture](fixture/README.md) — seeded native demo app.
 - [Scenarios](evals/scenarios.md) — checks and negative controls.
-- [Transfer cases](evals/transfer-cases.md) — contrasting tasks plus adversarial majority-wrong case (not yet run).
+- [Transfer cases](evals/transfer-cases.md) — contrasting tasks plus adversarial majority-wrong case; results are recorded in [validation](docs/VALIDATION.md).
 - [Provenance](PROVENANCE.md), [contributing](CONTRIBUTING.md).
 
 ## Requirements
@@ -50,13 +50,20 @@ optional fixture on macOS. Any skill-compatible host that can load `SKILL.md`.
 ## Install
 
 Clone, then copy the skill into one host directory you use. Never overwrites.
+For Codex, use `~/.codex/skills/macos-ui-consistency` as the canonical
+installation. Codex may also discover a copy in `~/.agents/skills`; installing
+both can create duplicate entries. A checkout of this repository is the source,
+not another global installation.
 
 ```sh
 git clone https://github.com/Niko96-dotcom/macos-ui-consistency.git
 SRC="macos-ui-consistency/skills/macos-ui-consistency"
 DEST="$HOME/.codex/skills/macos-ui-consistency"
+SHARED="$HOME/.agents/skills/macos-ui-consistency"
 if [ -e "$DEST" ] || [ -L "$DEST" ]; then
   echo "exists, leaving untouched: $DEST"
+elif [ -e "$SHARED" ] || [ -L "$SHARED" ]; then
+  echo "shared installation exists; choose one Codex location before copying: $SHARED"
 else
   mkdir -p "$(dirname "$DEST")"
   cp -R "$SRC" "$DEST"
@@ -164,7 +171,7 @@ dismisses with Return.
 
 ## Verification (current host only)
 
-- 53 Python tests pass locally, including explicit shared scopes, missing
+- 55 Python tests pass locally, including explicit shared scopes, missing
   targets, ownership/evidence gates, and byte-identical legacy output.
 - Native fixture built with Swift 6.3.3 on macOS 26; seeded and aligned
   modes visually inspected, sheet Return dismissal checked. Compact navigation,

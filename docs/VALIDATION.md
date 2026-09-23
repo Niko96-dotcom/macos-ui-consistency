@@ -2,6 +2,18 @@
 
 This is a skill and deterministic helper, not a benchmarked UI repair engine.
 
+## Skill and report hardening (2026-09-23)
+
+- The entrypoint now routes focused versus broad audits proportionally and
+  treats numeric comparison as optional when the issue is visual or interactive.
+  It keeps review-only requests read-only and confines automatic repairs to
+  clear app-owned drift with adequate before/after evidence.
+- The scanner ignores `.audit` trees so stored Swift snapshots do not appear
+  as live source candidates. The Markdown reporter rejects structurally
+  unsupported green findings and escapes supplied HTML and Markdown syntax.
+- All 55 Python tests pass. Skill validation, local links, and whitespace
+  checks pass. This revision did not run a new live app repair or visual trial.
+
 ## Relational guidance update (2026-09-19)
 
 - Added scoped guidance for paired view-switch slots, outer/inner content
